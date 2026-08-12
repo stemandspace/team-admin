@@ -88,7 +88,7 @@ export default function LoginPage() {
   return (
     <div className="login-page">
       <div className="card login-card">
-        <h1>Workshop Operations</h1>
+        <h1>Team Admin</h1>
         <p className="muted">Attendance, delivery and sales — one availability spine.</p>
         <form onSubmit={onSubmit} style={{ marginTop: '1.25rem' }}>
           {error && <div className="error">{error}</div>}

@@ -147,7 +147,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brand">
-          Workshop Ops
+          Team Admin
           <span>
             {user.fullName} · {user.role} · {user.team}
           </span>

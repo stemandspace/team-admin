@@ -4,7 +4,7 @@ import { LoadingProvider } from '@/lib/loading';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Workshop Operations',
+  title: 'Team Admin',
   description: 'Attendance, delivery and sales operations',
 };
 
