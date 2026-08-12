@@ -5,13 +5,52 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { PageLoader } from '@/lib/loading';
 
+const DEMO_USERS = [
+  {
+    name: 'System Owner',
+    email: 'owner@stemandspace.com',
+    password: 'Owner123!',
+    role: 'Owner',
+    team: 'Support',
+  },
+  {
+    name: 'Admin User',
+    email: 'admin@stemandspace.com',
+    password: 'Demo123!',
+    role: 'Administrator',
+    team: 'Support',
+  },
+  {
+    name: 'Asha Sales',
+    email: 'sales@stemandspace.com',
+    password: 'Demo123!',
+    role: 'Employee',
+    team: 'Sales',
+  },
+  {
+    name: 'Ravi Academic',
+    email: 'academic@stemandspace.com',
+    password: 'Demo123!',
+    role: 'Employee',
+    team: 'Academic',
+  },
+  {
+    name: 'Neha Support',
+    email: 'support@stemandspace.com',
+    password: 'Demo123!',
+    role: 'Employee',
+    team: 'Support',
+  },
+] as const;
+
 export default function LoginPage() {
   const { login, user, loading } = useAuth();
   const router = useRouter();
-  const [email, setEmail] = useState('owner@stemandspace.com');
-  const [password, setPassword] = useState('Owner123!');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [showCreds, setShowCreds] = useState(false);
 
   if (!loading && user) {
     router.replace('/dashboard');
@@ -25,18 +64,25 @@ export default function LoginPage() {
     );
   }
 
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault();
+  async function signIn(nextEmail: string, nextPassword: string) {
     setBusy(true);
     setError('');
+    setEmail(nextEmail);
+    setPassword(nextPassword);
     try {
-      await login(email, password);
+      await login(nextEmail, nextPassword);
+      setShowCreds(false);
       router.push('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {
       setBusy(false);
     }
+  }
+
+  async function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    await signIn(email, password);
   }
 
   return (
@@ -54,6 +100,7 @@ export default function LoginPage() {
               type="email"
               required
               disabled={busy}
+              placeholder="you@company.com"
             />
           </label>
           <label className="field">
@@ -64,9 +111,10 @@ export default function LoginPage() {
               type="password"
               required
               disabled={busy}
+              placeholder="••••••••"
             />
           </label>
-          <button className="btn large" disabled={busy}>
+          <button className="btn large" disabled={busy || !email || !password}>
             {busy ? (
               <>
                 <span className="spinner light" style={{ marginRight: 8 }} />
@@ -77,10 +125,78 @@ export default function LoginPage() {
             )}
           </button>
         </form>
-        <p className="muted" style={{ marginTop: '1rem', fontSize: '0.85rem' }}>
-          Demo: owner@stemandspace.com / Owner123! · sales@ / academic@ / support@ / admin@ · Demo123!
-        </p>
+
+        <button
+          type="button"
+          className="btn secondary demo-creds-trigger"
+          disabled={busy}
+          onClick={() => setShowCreds(true)}
+        >
+          Use demo credentials
+        </button>
       </div>
+
+      {showCreds && (
+        <div
+          className="modal-backdrop"
+          onClick={() => !busy && setShowCreds(false)}
+        >
+          <div
+            className="modal-card demo-creds-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="demo-creds-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="demo-creds-header">
+              <div>
+                <h2 id="demo-creds-title">Demo accounts</h2>
+                <p className="muted">Click any account to sign in instantly.</p>
+              </div>
+              <button
+                type="button"
+                className="btn secondary"
+                disabled={busy}
+                onClick={() => setShowCreds(false)}
+              >
+                Close
+              </button>
+            </div>
+
+            {error && <div className="error">{error}</div>}
+
+            <div className="demo-creds-list">
+              {DEMO_USERS.map((u) => (
+                <button
+                  key={u.email}
+                  type="button"
+                  className="demo-cred-item"
+                  disabled={busy}
+                  onClick={() => signIn(u.email, u.password)}
+                >
+                  <div className="demo-cred-main">
+                    <strong>{u.name}</strong>
+                    <span className="muted">{u.email}</span>
+                  </div>
+                  <div className="demo-cred-meta">
+                    <span className="badge">{u.role}</span>
+                    <span className="badge">{u.team}</span>
+                  </div>
+                  <div className="demo-cred-action">
+                    {busy && email === u.email ? (
+                      <>
+                        <span className="spinner" /> Signing in…
+                      </>
+                    ) : (
+                      'Login →'
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

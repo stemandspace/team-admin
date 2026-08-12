@@ -47,7 +47,9 @@ textarea {
 .app-shell {
   display: grid;
   grid-template-columns: 260px 1fr;
-  min-height: 100vh;
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
 }
 
 .sidebar {
@@ -57,6 +59,27 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  overflow: hidden;
+}
+
+.sidebar .nav {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 0.15rem;
+}
+
+.sidebar .nav::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar .nav::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
 }
 
 .brand {
@@ -76,10 +99,10 @@ textarea {
 
 .nav a {
   display: block;
-  padding: 0.65rem 0.85rem;
+  padding: 0.55rem 0.85rem;
   border-radius: 10px;
   color: rgba(244, 247, 245, 0.82);
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.15rem;
 }
 
 .nav a:hover,
@@ -88,8 +111,66 @@ textarea {
   color: white;
 }
 
+.nav-group {
+  margin-bottom: 0.35rem;
+}
+
+.nav-group-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: rgba(244, 247, 245, 0.92);
+  font: inherit;
+  font-weight: 600;
+  padding: 0.7rem 0.85rem;
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.nav-group-toggle:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.nav-group.has-active > .nav-group-toggle {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.nav-chevron {
+  display: inline-flex;
+  transition: transform 0.18s ease;
+  opacity: 0.75;
+  font-size: 0.85rem;
+}
+
+.nav-group.open .nav-chevron {
+  transform: rotate(180deg);
+}
+
+.nav-group-items {
+  padding: 0.15rem 0 0.35rem 0.55rem;
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+  margin: 0 0 0.25rem 0.85rem;
+  animation: fade-in 0.15s ease;
+}
+
+.nav-group-items a {
+  font-size: 0.95rem;
+  padding: 0.5rem 0.75rem;
+}
+
 .main {
   padding: 1.5rem;
+  position: relative;
+  height: 100vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .topbar {
@@ -231,6 +312,88 @@ h3 {
 
 .login-card {
   width: min(420px, 100%);
+}
+
+.demo-creds-trigger {
+  width: 100%;
+  margin-top: 0.9rem;
+}
+
+.demo-creds-modal {
+  width: min(520px, 100%);
+  max-height: min(85vh, 720px);
+  overflow: auto;
+}
+
+.demo-creds-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.demo-creds-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.demo-cred-item {
+  width: 100%;
+  text-align: left;
+  appearance: none;
+  cursor: pointer;
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 14px;
+  padding: 0.9rem 1rem;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    'main action'
+    'meta action';
+  gap: 0.35rem 0.75rem;
+  transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.demo-cred-item:hover:not(:disabled) {
+  border-color: rgba(15, 107, 76, 0.35);
+  box-shadow: 0 8px 20px rgba(26, 36, 33, 0.06);
+  transform: translateY(-1px);
+}
+
+.demo-cred-item:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.demo-cred-main {
+  grid-area: main;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.demo-cred-main strong {
+  font-size: 1rem;
+}
+
+.demo-cred-meta {
+  grid-area: meta;
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.demo-cred-action {
+  grid-area: action;
+  align-self: center;
+  color: var(--brand);
+  font-weight: 700;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
 }
 
 .punch-time {
@@ -430,10 +593,6 @@ h3 {
   margin-top: 1.2rem;
 }
 
-.main {
-  position: relative;
-}
-
 .main-content {
   transition: opacity 0.18s ease, transform 0.18s ease;
 }
@@ -503,12 +662,23 @@ h3 {
 @media (max-width: 900px) {
   .app-shell {
     grid-template-columns: 1fr;
+    height: auto;
+    max-height: none;
+    overflow: visible;
   }
 
   .sidebar {
     position: sticky;
     top: 0;
     z-index: 10;
+    height: auto;
+    max-height: 50vh;
+    overflow: hidden;
+  }
+
+  .main {
+    height: auto;
+    overflow: visible;
   }
 
   .grid-2,

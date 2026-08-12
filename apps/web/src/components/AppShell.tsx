@@ -1,50 +1,106 @@
 'use client';
 
-import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useTransition, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, useTransition, type ReactNode } from 'react';
 import { useAuth } from '@/lib/auth';
 import { PageLoader } from '@/lib/loading';
 
-const common = [
-  { href: '/dashboard', label: 'Home' },
-  { href: '/attendance', label: 'My Day' },
-  { href: '/leave', label: 'Leave' },
-  { href: '/schedule', label: 'Scheduling Sheet' },
-  { href: '/workshops', label: 'My Workshops' },
-  { href: '/trips', label: 'Trips' },
-  { href: '/compensation', label: 'Compensation' },
-  { href: '/contribution', label: 'Contribution Board' },
-  { href: '/analytics', label: 'My Analytics' },
-  { href: '/notifications', label: 'Notifications' },
-];
+type NavItem = { href: string; label: string };
+type NavGroup = { id: string; label: string; items: NavItem[] };
 
-const sales = [
-  { href: '/sales', label: 'Pipeline' },
-  { href: '/sales/follow-ups', label: 'Follow-ups' },
-  { href: '/sales/capacity', label: 'Capacity' },
-];
+function isActive(pathname: string, href: string) {
+  if (href === '/dashboard') return pathname === '/dashboard';
+  if (href === '/sales') return pathname === '/sales';
+  if (href === '/owner') return pathname === '/owner';
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
 
-const admin = [
-  { href: '/admin/attendance', label: 'Team Attendance' },
-  { href: '/admin/approvals', label: 'Approvals' },
-  { href: '/admin/workshops', label: 'Workshop Scheduler' },
-  { href: '/admin/people', label: 'People' },
-  { href: '/admin/settings', label: 'Settings' },
-  { href: '/admin/compliance', label: 'Compliance' },
-];
-
-const owner = [
-  { href: '/owner', label: 'Org Dashboard' },
-  { href: '/owner/activity', label: 'Activity Log' },
-  { href: '/owner/payouts', label: 'Payout Register' },
-];
+function groupContainsPath(group: NavGroup, pathname: string) {
+  return group.items.some((item) => isActive(pathname, item.href));
+}
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { user, loading, logout } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
   const [navigating, startTransition] = useTransition();
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+
+  const groups = useMemo<NavGroup[]>(() => {
+    if (!user) return [];
+
+    const list: NavGroup[] = [
+      {
+        id: 'home',
+        label: 'Home',
+        items: [
+          { href: '/dashboard', label: 'Dashboard' },
+          { href: '/notifications', label: 'Notifications' },
+        ],
+      },
+      {
+        id: 'my-work',
+        label: 'My Work',
+        items: [
+          { href: '/attendance', label: 'My Day' },
+          { href: '/leave', label: 'Leave' },
+          { href: '/workshops', label: 'My Workshops' },
+          { href: '/trips', label: 'Trips' },
+          { href: '/compensation', label: 'Compensation' },
+        ],
+      },
+      {
+        id: 'team',
+        label: 'Team & Insights',
+        items: [
+          { href: '/schedule', label: 'Scheduling Sheet' },
+          { href: '/contribution', label: 'Contribution Board' },
+          { href: '/analytics', label: 'My Analytics' },
+        ],
+      },
+    ];
+
+    if (user.team === 'sales' || user.role !== 'employee') {
+      list.push({
+        id: 'sales',
+        label: 'Sales',
+        items: [
+          { href: '/sales', label: 'Pipeline' },
+          { href: '/sales/follow-ups', label: 'Follow-ups' },
+          { href: '/sales/capacity', label: 'Capacity' },
+        ],
+      });
+    }
+
+    if (user.role === 'administrator' || user.role === 'owner') {
+      list.push({
+        id: 'admin',
+        label: 'Administration',
+        items: [
+          { href: '/admin/attendance', label: 'Team Attendance' },
+          { href: '/admin/approvals', label: 'Approvals' },
+          { href: '/admin/workshops', label: 'Workshop Scheduler' },
+          { href: '/admin/people', label: 'People' },
+          { href: '/admin/settings', label: 'Settings' },
+          { href: '/admin/compliance', label: 'Compliance' },
+        ],
+      });
+    }
+
+    if (user.role === 'owner') {
+      list.push({
+        id: 'owner',
+        label: 'Owner',
+        items: [
+          { href: '/owner', label: 'Org Dashboard' },
+          { href: '/owner/activity', label: 'Activity Log' },
+          { href: '/owner/payouts', label: 'Payout Register' },
+        ],
+      });
+    }
+
+    return list;
+  }, [user]);
 
   useEffect(() => {
     if (!loading && !user) router.replace('/login');
@@ -58,6 +114,12 @@ export function AppShell({ children }: { children: ReactNode }) {
     return () => window.clearTimeout(t);
   }, [pathname]);
 
+  useEffect(() => {
+    const active = groups.find((group) => groupContainsPath(group, pathname));
+    if (!active) return;
+    setOpenGroups({ [active.id]: true });
+  }, [pathname, groups]);
+
   if (loading || !user) {
     return (
       <div className="login-page">
@@ -66,18 +128,18 @@ export function AppShell({ children }: { children: ReactNode }) {
     );
   }
 
-  const links = [
-    ...common,
-    ...(user.team === 'sales' || user.role !== 'employee' ? sales : []),
-    ...(user.role === 'administrator' || user.role === 'owner' ? admin : []),
-    ...(user.role === 'owner' ? owner : []),
-  ];
-
   function go(href: string) {
     if (href === pathname) return;
     window.dispatchEvent(new Event('app:route-start'));
     startTransition(() => {
       router.push(href);
+    });
+  }
+
+  function toggleGroup(id: string) {
+    setOpenGroups((prev) => {
+      const isOpen = !!prev[id];
+      return isOpen ? {} : { [id]: true };
     });
   }
 
@@ -91,19 +153,42 @@ export function AppShell({ children }: { children: ReactNode }) {
           </span>
         </div>
         <nav className="nav">
-          {links.map((l) => (
-            <a
-              key={l.href}
-              href={l.href}
-              className={pathname === l.href || pathname.startsWith(l.href + '/') ? 'active' : ''}
-              onClick={(e) => {
-                e.preventDefault();
-                go(l.href);
-              }}
-            >
-              {l.label}
-            </a>
-          ))}
+          {groups.map((group) => {
+            const open = openGroups[group.id] ?? groupContainsPath(group, pathname);
+            const activeGroup = groupContainsPath(group, pathname);
+            return (
+              <div key={group.id} className={`nav-group ${open ? 'open' : ''} ${activeGroup ? 'has-active' : ''}`}>
+                <button
+                  type="button"
+                  className="nav-group-toggle"
+                  aria-expanded={open}
+                  onClick={() => toggleGroup(group.id)}
+                >
+                  <span>{group.label}</span>
+                  <span className="nav-chevron" aria-hidden>
+                    ▾
+                  </span>
+                </button>
+                {open && (
+                  <div className="nav-group-items">
+                    {group.items.map((item) => (
+                      <a
+                        key={item.href}
+                        href={item.href}
+                        className={isActive(pathname, item.href) ? 'active' : ''}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          go(item.href);
+                        }}
+                      >
+                        {item.label}
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </nav>
         <button
           className="btn secondary"
