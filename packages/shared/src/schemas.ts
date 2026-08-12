@@ -1,0 +1,194 @@
+import { z } from 'zod';
+import {
+  ASSIGNMENT_ROLES,
+  CLIENT_TYPES,
+  LEAVE_TYPES,
+  OPPORTUNITY_STAGES,
+  ROLES,
+  TEAMS,
+  WORKSHOP_CATEGORIES,
+} from './enums';
+
+export const loginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(6),
+});
+
+export const createPersonSchema = z.object({
+  fullName: z.string().min(2),
+  employeeCode: z.string().min(1),
+  email: z.string().email(),
+  phone: z.string().optional(),
+  team: z.enum(TEAMS),
+  role: z.enum(ROLES).default('employee'),
+  baseCity: z.string().min(1),
+  reportsToId: z.string().uuid().optional().nullable(),
+  dateOfJoining: z.string(),
+  password: z.string().min(6),
+});
+
+export const leaveRequestSchema = z.object({
+  fromDate: z.string(),
+  toDate: z.string(),
+  leaveType: z.enum(LEAVE_TYPES),
+  isHalfDay: z.boolean().default(false),
+  reason: z.string().min(5),
+  substitutePersonId: z.string().uuid().optional().nullable(),
+});
+
+export const punchSchema = z.object({
+  workLocation: z.enum(['office', 'home', 'client_site', 'travel']),
+  punchInLat: z.number().optional().nullable(),
+  punchInLng: z.number().optional().nullable(),
+  lateReason: z.string().optional().nullable(),
+});
+
+export const workshopCreateSchema = z.object({
+  engagementId: z.string().uuid().optional().nullable(),
+  clientId: z.string().uuid().optional().nullable(),
+  title: z.string().min(2),
+  moduleDelivered: z.string().optional().nullable(),
+  workshopCategory: z.enum(WORKSHOP_CATEGORIES),
+  revenueType: z
+    .enum(['client_billed', 'ticketed', 'sponsored', 'free_outreach', 'platform_hosted'])
+    .default('client_billed'),
+  mode: z.enum(['offline', 'online']),
+  platform: z
+    .enum(['none', 'spacetopia', 'youtube', 'zoom', 'google_meet'])
+    .default('none'),
+  locationType: z.enum(['within_city', 'outstation']).optional().nullable(),
+  city: z.string().min(1),
+  scheduledDate: z.string(),
+  startTime: z.string(),
+  endTime: z.string(),
+  sessionsCount: z.number().int().positive().default(1),
+  sessionStructure: z.enum(['sequential', 'parallel']).default('sequential'),
+  batchesPerDay: z.number().int().positive().default(1),
+  venue: z.string().optional().nullable(),
+  reportingTime: z.string().optional().nullable(),
+  deliveryCoordinatorName: z.string().optional().nullable(),
+  deliveryCoordinatorPhone: z.string().optional().nullable(),
+  grades: z
+    .array(
+      z.object({
+        gradeOrBand: z.string(),
+        expectedStudents: z.number().int().nonnegative(),
+        sectionNames: z.string().optional().nullable(),
+      }),
+    )
+    .default([]),
+});
+
+export const assignmentSchema = z.object({
+  personId: z.string().uuid(),
+  assignmentRole: z.enum(ASSIGNMENT_ROLES),
+  travelRequired: z.boolean().default(false),
+  travelDateOut: z.string().optional().nullable(),
+  travelDateReturn: z.string().optional().nullable(),
+});
+
+export const deliveryReportSchema = z.object({
+  workshopId: z.string().uuid(),
+  actualDate: z.string(),
+  teachersEngaged: z.number().int().nonnegative().default(0),
+  sessionsConducted: z.number().int().nonnegative().default(1),
+  batchesConducted: z.number().int().nonnegative().default(1),
+  totalDurationMinutes: z.number().int().nonnegative().default(60),
+  whatWorked: z.string().max(200).optional().nullable(),
+  whatToImprove: z.string().max(200).optional().nullable(),
+  feedbackScore: z.number().int().min(1).max(5).optional().nullable(),
+  gradeActuals: z.array(
+    z.object({
+      gradeBreakdownId: z.string().uuid(),
+      actualStudents: z.number().int().nonnegative(),
+    }),
+  ),
+});
+
+export const clientSchema = z.object({
+  name: z.string().min(2),
+  clientType: z.enum(CLIENT_TYPES),
+  city: z.string().min(1),
+  state: z.string().min(1),
+  board: z
+    .enum(['CBSE', 'ICSE', 'State', 'Other', 'Not applicable'])
+    .default('Not applicable'),
+  contactPerson: z.string().optional().nullable(),
+  contactPhone: z.string().optional().nullable(),
+  contactEmail: z.string().email().optional().nullable(),
+  source: z.string().optional().nullable(),
+});
+
+export const opportunitySchema = z.object({
+  clientId: z.string().uuid(),
+  contactId: z.string().uuid().optional().nullable(),
+  programId: z.string().uuid(),
+  expectedValue: z.number().nonnegative(),
+  expectedStudents: z.number().int().nonnegative().optional().nullable(),
+  expectedCloseDate: z.string().optional().nullable(),
+  expectedDeliveryWindowStart: z.string().optional().nullable(),
+  expectedDeliveryWindowEnd: z.string().optional().nullable(),
+  stage: z.enum(OPPORTUNITY_STAGES).default('exploratory'),
+});
+
+export const interactionSchema = z.object({
+  opportunityId: z.string().uuid(),
+  contactId: z.string().uuid().optional().nullable(),
+  communicationMode: z.enum([
+    'phone',
+    'whatsapp',
+    'whatsapp_call',
+    'email',
+    'zoom',
+    'physical_meeting',
+  ]),
+  interactionType: z.enum([
+    'first_contact',
+    'follow_up',
+    'proposal_discussion',
+    'registration_discussion',
+  ]),
+  outcome: z.enum([
+    'connected',
+    'no_answer',
+    'dead_connect',
+    'positive',
+    'neutral',
+    'negative',
+    'callback_requested',
+  ]),
+  notes: z.string().min(1),
+  nextFollowUpDate: z.string().optional().nullable(),
+  stageAfter: z.enum(OPPORTUNITY_STAGES).optional().nullable(),
+});
+
+export const shortAbsenceSchema = z.object({
+  date: z.string(),
+  category: z.enum(['official_work', 'personal']),
+  reason: z.string().min(20),
+  expectedOutTime: z.string(),
+  expectedDurationMinutes: z.number().int().positive(),
+  wasRetrospective: z.boolean().default(false),
+});
+
+export const correctionRequestSchema = z.object({
+  tableName: z.string(),
+  recordId: z.string().uuid(),
+  fieldName: z.string(),
+  currentValue: z.string(),
+  proposedValue: z.string(),
+  reason: z.string().min(20),
+});
+
+export const backdateRequestSchema = z.object({
+  tableName: z.string(),
+  targetDate: z.string(),
+  recordPayload: z.record(z.unknown()),
+  reason: z.string().min(20),
+});
+
+export const policyRuleUpdateSchema = z.object({
+  ruleValue: z.string(),
+  effectiveFrom: z.string().optional(),
+  description: z.string().optional(),
+});

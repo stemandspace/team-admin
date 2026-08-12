@@ -1,0 +1,1002 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Team {
+  sales
+  academic
+  support
+}
+
+enum Role {
+  employee
+  administrator
+  owner
+}
+
+enum DayStatus {
+  present_office
+  present_wfh
+  official_travel
+  workshop_delivery
+  leave_full
+  leave_half
+  comp_off_taken
+  rest_half_day
+  holiday
+  weekly_off
+  absent
+}
+
+enum LeaveType {
+  casual
+  sick
+  earned
+  unpaid
+}
+
+enum ApprovalStatus {
+  pending
+  approved
+  rejected
+}
+
+enum HolidayType {
+  gazetted
+  company
+  alternate_saturday_off
+  alternate_saturday_working
+}
+
+enum WorkLocation {
+  office
+  home
+  client_site
+  travel
+}
+
+enum ExtraHoursStatus {
+  pending
+  approved
+  rejected
+}
+
+enum ClientType {
+  school
+  community
+  retail
+  corporate
+}
+
+enum BoardType {
+  CBSE
+  ICSE
+  State
+  Other
+  Not_applicable @map("Not applicable")
+}
+
+enum LifecycleStatus {
+  prospect
+  active_client
+  dormant
+  lost
+}
+
+enum WorkshopCategory {
+  school_paid
+  community_paid
+  retail_paid
+  corporate_paid
+  csr_free
+  demo_free
+  youtube_open
+  spacetopia_open
+  internal_training
+}
+
+enum RevenueType {
+  client_billed
+  ticketed
+  sponsored
+  free_outreach
+  platform_hosted
+}
+
+enum WorkshopMode {
+  offline
+  online
+}
+
+enum WorkshopPlatform {
+  none
+  spacetopia
+  youtube
+  zoom
+  google_meet
+}
+
+enum LocationType {
+  within_city
+  outstation
+}
+
+enum WorkshopStatus {
+  tentative
+  confirmed
+  delivered
+  cancelled
+  not_conducted
+}
+
+enum AllocationStatus {
+  unallocated
+  provisional
+  final
+}
+
+enum SessionStructure {
+  sequential
+  parallel
+}
+
+enum AssignmentRole {
+  primary_educator
+  secondary_educator
+  primary_support
+  secondary_support
+  trainee
+  observer
+}
+
+enum AssignmentOutcome {
+  delivered
+  released_approved
+  released_not_accepted
+  no_show
+}
+
+enum CompOffReason {
+  sunday_delivery
+  sunday_travel
+  gazetted_holiday_working
+}
+
+enum ShortAbsenceCategory {
+  official_work
+  personal
+}
+
+enum ShortAbsenceStatus {
+  pending
+  approved
+  rejected
+  active
+  closed
+}
+
+enum OpportunityStage {
+  exploratory
+  interested
+  proposal_shared
+  follow_up_required
+  registered
+  completed
+  not_interested
+  lost
+}
+
+enum ProgramFamily {
+  workshop
+  project
+  olympiad
+  challenge
+  other
+}
+
+enum Audience {
+  school
+  retail_direct_parent
+}
+
+enum CommunicationMode {
+  phone
+  whatsapp
+  whatsapp_call
+  email
+  zoom
+  physical_meeting
+}
+
+enum InteractionType {
+  first_contact
+  follow_up
+  proposal_discussion
+  registration_discussion
+}
+
+enum InteractionOutcome {
+  connected
+  no_answer
+  dead_connect
+  positive
+  neutral
+  negative
+  callback_requested
+}
+
+enum ActivityAction {
+  login_success
+  login_failed
+  logout
+  insert
+  update
+  void
+  approve
+  reject
+  override
+  config_change
+  permission_change
+  document_upload
+  document_version_change
+  export
+  sensitive_view
+  bulk_action
+}
+
+enum NotificationPriority {
+  info
+  action_required
+  urgent
+}
+
+enum NotificationChannel {
+  in_app
+  email
+  push
+}
+
+enum TripStatus {
+  planned
+  in_progress
+  completed
+  cancelled
+}
+
+enum ClaimStatus {
+  pending
+  approved
+  rejected
+  settled
+}
+
+enum CompensationKind {
+  comp_off
+  cash
+  extra_hours
+  incentive
+  travel_allowance
+}
+
+model Person {
+  id             String    @id @default(uuid())
+  fullName       String
+  employeeCode   String    @unique
+  email          String    @unique
+  phone          String?
+  passwordHash   String
+  team           Team
+  role           Role      @default(employee)
+  baseCity       String
+  reportsToId    String?
+  reportsTo      Person?   @relation("ReportsTo", fields: [reportsToId], references: [id])
+  reports        Person[]  @relation("ReportsTo")
+  dateOfJoining  DateTime  @db.Date
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  dayRecords              DayRecord[]
+  leaveRequests           LeaveRequest[]             @relation("LeaveRequester")
+  leaveApprovals          LeaveRequest[]             @relation("LeaveApprover")
+  leaveBalances           LeaveBalance[]
+  compOffLedger           CompOffLedger[]
+  shiftConfigs            ShiftConfig[]
+  shortAbsences           ShortAbsenceRequest[]      @relation("ShortAbsencePerson")
+  shortAbsenceApprovals   ShortAbsenceRequest[]      @relation("ShortAbsenceApprover")
+  workshopsCreated        Workshop[]                 @relation("WorkshopCreator")
+  assignments             WorkshopAssignment[]
+  deliveryReports         DeliveryReport[]           @relation("DeliverySubmitter")
+  deliveryVerifications   DeliveryReport[]           @relation("DeliveryVerifier")
+  platformReachCaptured   PlatformReach[]
+  correctionRequests      CorrectionRequest[]        @relation("CorrectionRequester")
+  correctionReviews       CorrectionRequest[]        @relation("CorrectionReviewer")
+  backdateRequests        BackdateRequest[]          @relation("BackdateRequester")
+  backdateReviews         BackdateRequest[]          @relation("BackdateReviewer")
+  activityLogs            ActivityLog[]              @relation("ActivityActor")
+  notifications           Notification[]
+  opportunitiesOwned      Opportunity[]              @relation("OpportunityOwner")
+  interactions            Interaction[]
+  salesTargets            SalesTarget[]
+  trips                   Trip[]
+  advances                Advance[]
+  expenseClaims           ExpenseClaim[]             @relation("ClaimSubmitter")
+  expenseApprovals        ExpenseClaim[]             @relation("ClaimApprover")
+  compensationEntries     CompensationLedger[]
+  roleAgreements          RoleAgreement[]            @relation("AgreementPerson")
+  roleAgreementsApproved  RoleAgreement[]            @relation("AgreementApprover")
+  policyAcks              PolicyAcknowledgement[]
+  salaryDetails           SalaryDetail?
+  conductRecords          ConductRecord[]            @relation("ConductSubject")
+  conductIssued           ConductRecord[]            @relation("ConductIssuer")
+  unavailabilityRequests  UnavailabilityRequest[]    @relation("UnavailPerson")
+  unavailabilityReviews   UnavailabilityRequest[]    @relation("UnavailReviewer")
+  extraHoursApprovals     DayRecord[]                @relation("ExtraHoursApprover")
+  dayApprovals            DayRecord[]                @relation("DayApprover")
+  dayCreated              DayRecord[]                @relation("DayCreator")
+  leaveSubstitutes        LeaveRequest[]             @relation("LeaveSubstitute")
+  contactsCreated         Contact[]
+}
+
+model PolicyRule {
+  id            String   @id @default(uuid())
+  ruleKey       String
+  ruleValue     String
+  description   String?
+  effectiveFrom DateTime @default(now()) @db.Date
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([ruleKey, effectiveFrom])
+}
+
+model HolidayCalendar {
+  id            String      @id @default(uuid())
+  date          DateTime    @db.Date
+  name          String
+  type          HolidayType
+  appliesToCity String?
+  createdAt     DateTime    @default(now())
+
+  @@index([date])
+}
+
+model ShiftConfig {
+  id                String   @id @default(uuid())
+  personId          String?
+  person            Person?  @relation(fields: [personId], references: [id])
+  team              Team?
+  expectedStartTime String   @default("09:30")
+  expectedEndTime   String   @default("18:00")
+  graceMinutes      Int      @default(15)
+  effectiveFrom     DateTime @default(now()) @db.Date
+}
+
+model DayRecord {
+  id                     String            @id @default(uuid())
+  personId               String
+  person                 Person            @relation(fields: [personId], references: [id])
+  date                   DateTime          @db.Date
+  status                 DayStatus
+  secondHalfStatus       DayStatus?
+  leaveType              LeaveType?
+  isPaid                 Boolean           @default(true)
+  unapprovedAbsence      Boolean           @default(false)
+  linkedWorkshopId       String?
+  linkedWorkshop         Workshop?         @relation(fields: [linkedWorkshopId], references: [id])
+  linkedEngagementId     String?
+  linkedEngagement       Engagement?       @relation(fields: [linkedEngagementId], references: [id])
+  roleContext            String?
+  notes                  String?
+  punchInTime            DateTime?
+  punchOutTime           DateTime?
+  workLocation           WorkLocation?
+  punchInLat             Float?
+  punchInLng             Float?
+  hoursWorked            Float?
+  expectedStartTime      String?
+  minutesLate            Int?
+  isLate                 Boolean           @default(false)
+  lateReason             String?
+  penaltyApplied         Boolean           @default(false)
+  penaltyDays            Float?
+  penaltyTrigger         String?
+  penaltySource          String?
+  extraMinutes           Int?
+  extraMinutesApproved   Int?
+  extraHoursStatus       ExtraHoursStatus?
+  extraHoursApproverId   String?
+  extraHoursApprover     Person?           @relation("ExtraHoursApprover", fields: [extraHoursApproverId], references: [id])
+  travelStartAt          DateTime?
+  travelReturnAt         DateTime?
+  travelPlannedStart     DateTime?
+  travelPlannedReturn    DateTime?
+  varianceMinutes        Int?
+  restHalfDayOffered     Boolean           @default(false)
+  restHalfDayAccepted    Boolean           @default(false)
+  restHalfDaySourceReturnId String?
+  createdById            String?
+  createdBy              Person?           @relation("DayCreator", fields: [createdById], references: [id])
+  approvedById           String?
+  approvedBy             Person?           @relation("DayApprover", fields: [approvedById], references: [id])
+  approvalStatus         ApprovalStatus?
+  isLocked               Boolean           @default(false)
+  submittedAt            DateTime?
+  wasBackdated           Boolean           @default(false)
+  daysLate               Int?
+  wasAmended             Boolean           @default(false)
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
+
+  @@unique([personId, date])
+  @@index([date])
+  @@index([status])
+}
+
+model LeaveRequest {
+  id                    String          @id @default(uuid())
+  personId              String
+  person                Person          @relation("LeaveRequester", fields: [personId], references: [id])
+  fromDate              DateTime        @db.Date
+  toDate                DateTime        @db.Date
+  leaveType             LeaveType
+  isHalfDay             Boolean         @default(false)
+  reason                String
+  daysCounted           Float?
+  status                ApprovalStatus  @default(pending)
+  approverId            String?
+  approver              Person?         @relation("LeaveApprover", fields: [approverId], references: [id])
+  approverComment       String?
+  conflictingWorkshopId String?
+  conflictingWorkshop   Workshop?       @relation(fields: [conflictingWorkshopId], references: [id])
+  substitutePersonId    String?
+  substitutePerson      Person?         @relation("LeaveSubstitute", fields: [substitutePersonId], references: [id])
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+}
+
+model LeaveBalance {
+  id              String    @id @default(uuid())
+  personId        String
+  person          Person    @relation(fields: [personId], references: [id])
+  year            Int
+  leaveType       LeaveType
+  openingBalance  Float     @default(0)
+  accrued         Float     @default(0)
+  taken           Float     @default(0)
+  balance         Float     @default(0)
+
+  @@unique([personId, year, leaveType])
+}
+
+model CompOffLedger {
+  id            String        @id @default(uuid())
+  personId      String
+  person        Person        @relation(fields: [personId], references: [id])
+  earnedDate    DateTime      @db.Date
+  earnedReason  CompOffReason
+  daysEarned    Float
+  expiryDate    DateTime      @db.Date
+  daysUsed      Float         @default(0)
+  daysRemaining Float
+  createdAt     DateTime      @default(now())
+}
+
+model Client {
+  id              String          @id @default(uuid())
+  name            String
+  clientType      ClientType
+  city            String
+  state           String
+  board           BoardType       @default(Not_applicable)
+  contactPerson   String?
+  contactPhone    String?
+  contactEmail    String?
+  source          String?
+  lifecycleStatus LifecycleStatus @default(prospect)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  engagements   Engagement[]
+  workshops     Workshop[]
+  contacts      Contact[]
+  opportunities Opportunity[]
+}
+
+model Engagement {
+  id                      String   @id @default(uuid())
+  clientId                String
+  client                  Client   @relation(fields: [clientId], references: [id])
+  title                   String
+  programId               String?
+  program                 Program? @relation(fields: [programId], references: [id])
+  expectedStudents        Int?
+  deliveryWindowStart     DateTime? @db.Date
+  deliveryWindowEnd       DateTime? @db.Date
+  totalRevenueCollected   Float    @default(0)
+  expectedValue           Float?
+  status                  String   @default("active")
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  workshops     Workshop[]
+  dayRecords    DayRecord[]
+  deliveryReports DeliveryReport[]
+  trips         Trip[]
+  opportunities Opportunity[]
+}
+
+model Workshop {
+  id                        String            @id @default(uuid())
+  engagementId              String?
+  engagement                Engagement?      @relation(fields: [engagementId], references: [id])
+  clientId                  String?
+  client                    Client?           @relation(fields: [clientId], references: [id])
+  title                     String
+  moduleDelivered           String?
+  workshopCategory          WorkshopCategory
+  isPaidWorkshop            Boolean
+  revenueType               RevenueType
+  mode                      WorkshopMode
+  platform                  WorkshopPlatform  @default(none)
+  locationType              LocationType?
+  city                      String
+  scheduledDate             DateTime          @db.Date
+  startTime                 String
+  endTime                   String
+  sessionsCount             Int               @default(1)
+  expectedStudents          Int               @default(0)
+  status                    WorkshopStatus    @default(tentative)
+  cancellationReason        String?
+  allocationDeadline        DateTime?
+  allocationStatus          AllocationStatus  @default(unallocated)
+  sessionStructure          SessionStructure  @default(sequential)
+  batchesPerDay             Int               @default(1)
+  venue                     String?
+  reportingTime             String?
+  deliveryCoordinatorName   String?
+  deliveryCoordinatorPhone  String?
+  createdById               String?
+  createdBy                 Person?           @relation("WorkshopCreator", fields: [createdById], references: [id])
+  createdAt                 DateTime          @default(now())
+  updatedAt                 DateTime          @updatedAt
+
+  grades          WorkshopGradeBreakdown[]
+  assignments     WorkshopAssignment[]
+  deliveryReports DeliveryReport[]
+  platformReach   PlatformReach[]
+  dayRecords      DayRecord[]
+  leaveConflicts  LeaveRequest[]
+}
+
+model WorkshopGradeBreakdown {
+  id               String   @id @default(uuid())
+  workshopId       String
+  workshop         Workshop @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+  gradeOrBand      String
+  expectedStudents Int
+  actualStudents   Int?
+  sectionNames     String?
+}
+
+model WorkshopAssignment {
+  id                       String             @id @default(uuid())
+  workshopId               String
+  workshop                 Workshop           @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+  personId                 String
+  person                   Person             @relation(fields: [personId], references: [id])
+  assignmentRole           AssignmentRole
+  creditWeight             Float              @default(0)
+  travelRequired           Boolean            @default(false)
+  travelDateOut            DateTime?          @db.Date
+  travelDateReturn         DateTime?          @db.Date
+  assignmentOutcome        AssignmentOutcome?
+  daysNoticeBeforeWorkshop Int?
+  createdAt                DateTime           @default(now())
+
+  @@unique([workshopId, personId, assignmentRole])
+}
+
+model DeliveryReport {
+  id                  String    @id @default(uuid())
+  workshopId          String
+  workshop            Workshop  @relation(fields: [workshopId], references: [id])
+  engagementId        String?
+  engagement          Engagement? @relation(fields: [engagementId], references: [id])
+  submittedById       String
+  submittedBy         Person    @relation("DeliverySubmitter", fields: [submittedById], references: [id])
+  submittedAt         DateTime  @default(now())
+  actualDate          DateTime  @db.Date
+  studentsEngaged     Int
+  teachersEngaged     Int       @default(0)
+  sessionsConducted   Int       @default(1)
+  batchesConducted    Int       @default(1)
+  totalDurationMinutes Int      @default(0)
+  absenteeismCount    Int       @default(0)
+  whatWorked          String?
+  whatToImprove       String?
+  photos              String[]  @default([])
+  feedbackScore       Int?
+  engagementVerified  Boolean   @default(false)
+  verifiedById        String?
+  verifiedBy          Person?   @relation("DeliveryVerifier", fields: [verifiedById], references: [id])
+  verifiedAt          DateTime?
+  varianceFlagged     Boolean   @default(false)
+  isLocked            Boolean   @default(true)
+  wasBackdated        Boolean   @default(false)
+  daysLate            Int?
+  wasAmended          Boolean   @default(false)
+}
+
+model PlatformReach {
+  id                   String   @id @default(uuid())
+  workshopId           String
+  workshop             Workshop @relation(fields: [workshopId], references: [id])
+  platform             String
+  registrations        Int?
+  liveAttendees        Int?
+  peakConcurrent       Int?
+  views24h             Int?
+  views7d              Int?
+  views30d             Int?
+  averageWatchMinutes  Float?
+  completionRate       Float?
+  capturedAt           DateTime @default(now())
+  capturedById         String?
+  capturedBy           Person?  @relation(fields: [capturedById], references: [id])
+  source               String   @default("manual")
+}
+
+model ShortAbsenceRequest {
+  id                       String               @id @default(uuid())
+  personId                 String
+  person                   Person               @relation("ShortAbsencePerson", fields: [personId], references: [id])
+  date                     DateTime             @db.Date
+  requestedAt              DateTime             @default(now())
+  category                 ShortAbsenceCategory
+  reason                   String
+  expectedOutTime          String
+  expectedDurationMinutes  Int
+  actualOutTime            DateTime?
+  actualReturnTime         DateTime?
+  actualDurationMinutes    Int?
+  overrunMinutes           Int?
+  status                   ShortAbsenceStatus    @default(pending)
+  approverId               String?
+  approver                 Person?              @relation("ShortAbsenceApprover", fields: [approverId], references: [id])
+  approvedAt               DateTime?
+  approverComment          String?
+  wasRetrospective         Boolean              @default(false)
+}
+
+model CorrectionRequest {
+  id            String         @id @default(uuid())
+  tableName     String
+  recordId      String
+  requestedById String
+  requestedBy   Person         @relation("CorrectionRequester", fields: [requestedById], references: [id])
+  requestedAt   DateTime       @default(now())
+  fieldName     String
+  currentValue  String
+  proposedValue String
+  reason        String
+  status        ApprovalStatus @default(pending)
+  reviewedById  String?
+  reviewedBy    Person?        @relation("CorrectionReviewer", fields: [reviewedById], references: [id])
+  reviewedAt    DateTime?
+  reviewerComment String?
+}
+
+model BackdateRequest {
+  id            String         @id @default(uuid())
+  tableName     String
+  requestedById String
+  requestedBy   Person         @relation("BackdateRequester", fields: [requestedById], references: [id])
+  requestedAt   DateTime       @default(now())
+  targetDate    DateTime       @db.Date
+  daysLate      Int
+  recordPayload Json
+  reason        String
+  status        ApprovalStatus @default(pending)
+  reviewedById  String?
+  reviewedBy    Person?        @relation("BackdateReviewer", fields: [reviewedById], references: [id])
+  reviewedAt    DateTime?
+  reviewerComment String?
+}
+
+model ActivityLog {
+  id                 String         @id @default(uuid())
+  occurredAt         DateTime       @default(now())
+  actorPersonId      String?
+  actor              Person?        @relation("ActivityActor", fields: [actorPersonId], references: [id])
+  actorRoleAtTime    Role?
+  actingOnBehalfOf   String?
+  action             ActivityAction
+  tableName          String?
+  recordId           String?
+  affectedPersonId   String?
+  oldValue           Json?
+  newValue           Json?
+  reason             String?
+  linkedRequestId    String?
+  linkedCorrectionId String?
+  linkedBackdateId   String?
+  ipAddress          String?
+  deviceFingerprint  String?
+  sessionId          String?
+  bulkGroupId        String?
+}
+
+model Notification {
+  id                 String               @id @default(uuid())
+  recipientPersonId  String
+  recipient          Person               @relation(fields: [recipientPersonId], references: [id])
+  category           String
+  title              String
+  body               String
+  linkedRecordType   String?
+  linkedRecordId     String?
+  deepLink           String?
+  channel            NotificationChannel  @default(in_app)
+  priority           NotificationPriority @default(info)
+  createdAt          DateTime             @default(now())
+  readAt             DateTime?
+  actionedAt         DateTime?
+  expiresAt          DateTime?
+}
+
+model Program {
+  id                      String        @id @default(uuid())
+  name                    String
+  programFamily           ProgramFamily
+  audience                Audience
+  deliveryModeSupported   String        @default("both")
+  defaultPrice            Float?
+  priceUnit               String?
+  isActive                Boolean       @default(true)
+  effectiveFrom           DateTime      @default(now()) @db.Date
+  mapsToWorkshopCategory  WorkshopCategory?
+
+  opportunities Opportunity[]
+  salesTargets  SalesTarget[]
+  engagements   Engagement[]
+}
+
+model Contact {
+  id                String   @id @default(uuid())
+  clientId          String
+  client            Client   @relation(fields: [clientId], references: [id])
+  name              String
+  designation       String?
+  mobile            String?
+  email             String?
+  isPrimary         Boolean  @default(false)
+  isActive          Boolean  @default(true)
+  preferredChannel  String?
+  notes             String?
+  createdById       String?
+  createdBy         Person?  @relation(fields: [createdById], references: [id])
+  createdAt         DateTime @default(now())
+
+  opportunities Opportunity[]
+  interactions  Interaction[]
+}
+
+model Opportunity {
+  id                            String           @id @default(uuid())
+  clientId                      String
+  client                        Client           @relation(fields: [clientId], references: [id])
+  contactId                     String?
+  contact                       Contact?         @relation(fields: [contactId], references: [id])
+  programId                     String
+  program                       Program          @relation(fields: [programId], references: [id])
+  ownerPersonId                 String
+  owner                         Person           @relation("OpportunityOwner", fields: [ownerPersonId], references: [id])
+  stage                         OpportunityStage @default(exploratory)
+  expectedValue                 Float            @default(0)
+  expectedStudents              Int?
+  expectedCloseDate             DateTime?        @db.Date
+  expectedDeliveryWindowStart   DateTime?        @db.Date
+  expectedDeliveryWindowEnd     DateTime?        @db.Date
+  lostReason                    String?
+  lostTo                        String?
+  linkedEngagementId            String?
+  linkedEngagement              Engagement?      @relation(fields: [linkedEngagementId], references: [id])
+  createdAt                     DateTime         @default(now())
+  lastInteractionAt             DateTime?
+  dormantSince                  DateTime?
+  reassignedFromPersonId        String?
+  reassignedAt                  DateTime?
+  reassignmentReason            String?
+  isLocked                      Boolean          @default(false)
+
+  interactions Interaction[]
+
+  @@unique([clientId, programId])
+}
+
+model Interaction {
+  id                       String             @id @default(uuid())
+  opportunityId            String
+  opportunity              Opportunity       @relation(fields: [opportunityId], references: [id])
+  contactId                String?
+  contact                  Contact?          @relation(fields: [contactId], references: [id])
+  personId                 String
+  person                   Person            @relation(fields: [personId], references: [id])
+  communicationMode        CommunicationMode
+  interactionType          InteractionType
+  outcome                  InteractionOutcome
+  notes                    String
+  stageBefore              OpportunityStage?
+  stageAfter               OpportunityStage?
+  nextFollowUpDate         DateTime?         @db.Date
+  occurredAt               DateTime          @default(now())
+  loggedAt                 DateTime          @default(now())
+  followUpCompleted        Boolean           @default(false)
+  completedByInteractionId String?
+  isLocked                 Boolean           @default(true)
+}
+
+model SalesTarget {
+  id                  String   @id @default(uuid())
+  personId            String
+  person              Person   @relation(fields: [personId], references: [id])
+  month               DateTime @db.Date
+  programId           String?
+  program             Program? @relation(fields: [programId], references: [id])
+  targetValue         Float
+  targetRegistrations Int?
+  setById             String?
+  setAt               DateTime @default(now())
+  effectiveFrom       DateTime @default(now()) @db.Date
+}
+
+model Trip {
+  id              String     @id @default(uuid())
+  personId        String
+  person          Person     @relation(fields: [personId], references: [id])
+  engagementId    String?
+  engagement      Engagement? @relation(fields: [engagementId], references: [id])
+  workshopId      String?
+  city            String
+  dateOut         DateTime   @db.Date
+  dateReturn      DateTime   @db.Date
+  tripDays        Float?
+  status          TripStatus @default(planned)
+  createdAt       DateTime   @default(now())
+
+  advances      Advance[]
+  expenseClaims ExpenseClaim[]
+}
+
+model Advance {
+  id          String   @id @default(uuid())
+  tripId      String
+  trip        Trip     @relation(fields: [tripId], references: [id])
+  personId    String
+  person      Person   @relation(fields: [personId], references: [id])
+  amount      Float
+  issuedAt    DateTime @default(now())
+  settled     Boolean  @default(false)
+  notes       String?
+}
+
+model ExpenseClaim {
+  id            String      @id @default(uuid())
+  tripId        String?
+  trip          Trip?       @relation(fields: [tripId], references: [id])
+  personId      String
+  person        Person      @relation("ClaimSubmitter", fields: [personId], references: [id])
+  claimDate     DateTime    @db.Date
+  category      String
+  amount        Float
+  receiptUrl    String?
+  notes         String?
+  status        ClaimStatus @default(pending)
+  approverId    String?
+  approver      Person?     @relation("ClaimApprover", fields: [approverId], references: [id])
+  approvedAt    DateTime?
+  createdAt     DateTime    @default(now())
+  isLocked      Boolean     @default(true)
+}
+
+model CompensationLedger {
+  id          String           @id @default(uuid())
+  personId    String
+  person      Person           @relation(fields: [personId], references: [id])
+  kind        CompensationKind
+  sourceDate  DateTime         @db.Date
+  days        Float?
+  amount      Float?
+  election    String?
+  status      String           @default("pending")
+  notes       String?
+  createdAt   DateTime         @default(now())
+}
+
+model RoleAgreement {
+  id                String   @id @default(uuid())
+  personId          String
+  person            Person   @relation("AgreementPerson", fields: [personId], references: [id])
+  version           Int
+  primaryRole       String
+  secondaryRole     String?
+  modulesQualified  String[] @default([])
+  gradeBands        String[] @default([])
+  capsJson          Json?
+  targetsJson       Json?
+  status            String   @default("draft")
+  acknowledgedAt    DateTime?
+  acknowledgeComment String?
+  approvedById      String?
+  approvedBy        Person?  @relation("AgreementApprover", fields: [approvedById], references: [id])
+  effectiveFrom     DateTime @db.Date
+  createdAt         DateTime @default(now())
+}
+
+model PolicyDocument {
+  id                    String   @id @default(uuid())
+  title                 String
+  bodyOrUrl             String
+  version               Int      @default(1)
+  visibilityTeams       Team[]
+  requiresAcknowledgement Boolean @default(false)
+  effectiveFrom         DateTime @default(now()) @db.Date
+  createdAt             DateTime @default(now())
+
+  acknowledgements PolicyAcknowledgement[]
+}
+
+model PolicyAcknowledgement {
+  id         String         @id @default(uuid())
+  documentId String
+  document   PolicyDocument @relation(fields: [documentId], references: [id])
+  personId   String
+  person     Person         @relation(fields: [personId], references: [id])
+  acknowledgedAt DateTime   @default(now())
+  comment    String?
+
+  @@unique([documentId, personId])
+}
+
+model SalaryDetail {
+  id           String @id @default(uuid())
+  personId     String @unique
+  person       Person @relation(fields: [personId], references: [id])
+  basicMonthly Float
+  currency     String @default("INR")
+  notes        String?
+}
+
+model ConductRecord {
+  id          String   @id @default(uuid())
+  personId    String
+  person      Person   @relation("ConductSubject", fields: [personId], references: [id])
+  stage       String
+  details     String
+  documentUrl String?
+  response    String?
+  issuedById  String?
+  issuedBy    Person?  @relation("ConductIssuer", fields: [issuedById], references: [id])
+  issuedAt    DateTime @default(now())
+}
+
+model UnavailabilityRequest {
+  id            String         @id @default(uuid())
+  personId      String
+  person        Person         @relation("UnavailPerson", fields: [personId], references: [id])
+  fromDate      DateTime       @db.Date
+  toDate        DateTime       @db.Date
+  reason        String
+  status        ApprovalStatus @default(pending)
+  reviewedById  String?
+  reviewedBy    Person?        @relation("UnavailReviewer", fields: [reviewedById], references: [id])
+  reviewedAt    DateTime?
+  reviewerComment String?
+  createdAt     DateTime       @default(now())
+}
