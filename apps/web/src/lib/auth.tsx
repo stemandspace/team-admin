@@ -26,7 +26,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refresh = useCallback(async () => {
     try {
-      const me = await api<User>('/auth/me');
+      const me = await api<User>('/auth/me', { silent: true });
       setUser(me);
     } catch {
       setUser(null);
@@ -44,6 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const res = await api<{ token: string; user: User }>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
+      loadingLabel: 'Signing in…',
     });
     setToken(res.token);
     setUser(res.user);
@@ -51,7 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     try {
-      await api('/auth/logout', { method: 'POST' });
+      await api('/auth/logout', { method: 'POST', loadingLabel: 'Signing out…' });
     } catch {
       /* ignore */
     }

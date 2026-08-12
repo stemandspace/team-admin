@@ -304,3 +304,92 @@ export async function getBalances(user: AuthUser, personId?: string) {
   const year = new Date().getFullYear();
   return prisma.leaveBalance.findMany({ where: { personId: id, year } });
 }
+
+/**
+ * Employee: may delete own pending requests only.
+ * Admin/Owner: may delete any request; approved ones restore balance and clear leave day_records.
+ */
+export async function deleteLeaveRequest(user: AuthUser, id: string) {
+  const req = await prisma.leaveRequest.findUnique({ where: { id } });
+  if (!req) throw new AppError('Not found', 404);
+
+  const isAdmin = canApprove(toVisibility(user));
+  const isOwner = req.personId === user.id;
+
+  if (!isOwner && !isAdmin) {
+    throw new AppError('Forbidden', 403);
+  }
+
+  if (isOwner && !isAdmin && req.status !== ApprovalStatus.pending) {
+    throw new AppError('You can only delete pending leave requests');
+  }
+
+  if (req.status === ApprovalStatus.approved) {
+    if (!isAdmin) throw new AppError('Only an administrator can delete approved leave');
+
+    const days = req.daysCounted || 0;
+    if (req.leaveType !== LeaveType.unpaid && days > 0) {
+      const bal = await prisma.leaveBalance.findUnique({
+        where: {
+          personId_year_leaveType: {
+            personId: req.personId,
+            year: req.fromDate.getUTCFullYear(),
+            leaveType: req.leaveType,
+          },
+        },
+      });
+      if (bal) {
+        await prisma.leaveBalance.update({
+          where: { id: bal.id },
+          data: {
+            taken: Math.max(0, bal.taken - days),
+            balance: bal.balance + days,
+          },
+        });
+      }
+    }
+
+    for (const d of eachDate(req.fromDate, req.toDate)) {
+      const record = await prisma.dayRecord.findUnique({
+        where: { personId_date: { personId: req.personId, date: d } },
+      });
+      if (
+        record &&
+        (record.status === DayStatus.leave_full || record.status === DayStatus.leave_half)
+      ) {
+        await prisma.dayRecord.delete({ where: { id: record.id } });
+      }
+    }
+  }
+
+  await prisma.leaveRequest.delete({ where: { id } });
+
+  await logActivity({
+    actor: user,
+    action: ActivityAction.void,
+    tableName: 'leave_request',
+    recordId: id,
+    affectedPersonId: req.personId,
+    oldValue: {
+      status: req.status,
+      fromDate: req.fromDate,
+      toDate: req.toDate,
+      leaveType: req.leaveType,
+    },
+    reason: isOwner && !isAdmin ? 'Cancelled by employee' : 'Deleted by administrator',
+  });
+
+  if (!isOwner) {
+    await notify({
+      recipientPersonId: req.personId,
+      category: 'leave',
+      title: 'Leave request deleted',
+      body: 'An administrator removed your leave request.',
+      linkedRecordId: id,
+      priority: 'info',
+    });
+  }
+
+  return { ok: true };
+}
+

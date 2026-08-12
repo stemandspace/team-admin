@@ -3,6 +3,7 @@
 import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
+import { PageLoader } from '@/lib/loading';
 
 export default function LoginPage() {
   const { login, user, loading } = useAuth();
@@ -14,6 +15,14 @@ export default function LoginPage() {
 
   if (!loading && user) {
     router.replace('/dashboard');
+  }
+
+  if (loading) {
+    return (
+      <div className="login-page">
+        <PageLoader label="Checking session…" />
+      </div>
+    );
   }
 
   async function onSubmit(e: FormEvent) {
@@ -39,14 +48,33 @@ export default function LoginPage() {
           {error && <div className="error">{error}</div>}
           <label className="field">
             Email
-            <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" required />
+            <input
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              type="email"
+              required
+              disabled={busy}
+            />
           </label>
           <label className="field">
             Password
-            <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" required />
+            <input
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              type="password"
+              required
+              disabled={busy}
+            />
           </label>
           <button className="btn large" disabled={busy}>
-            {busy ? 'Signing in…' : 'Sign in'}
+            {busy ? (
+              <>
+                <span className="spinner light" style={{ marginRight: 8 }} />
+                Signing in…
+              </>
+            ) : (
+              'Sign in'
+            )}
           </button>
         </form>
         <p className="muted" style={{ marginTop: '1rem', fontSize: '0.85rem' }}>

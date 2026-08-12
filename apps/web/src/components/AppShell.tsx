@@ -2,8 +2,9 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useTransition, type ReactNode } from 'react';
 import { useAuth } from '@/lib/auth';
+import { PageLoader } from '@/lib/loading';
 
 const common = [
   { href: '/dashboard', label: 'Home' },
@@ -43,15 +44,24 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { user, loading, logout } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
+  const [navigating, startTransition] = useTransition();
 
   useEffect(() => {
     if (!loading && !user) router.replace('/login');
   }, [loading, user, router]);
 
+  useEffect(() => {
+    window.dispatchEvent(new Event('app:route-start'));
+    const t = window.setTimeout(() => {
+      window.dispatchEvent(new Event('app:route-end'));
+    }, 280);
+    return () => window.clearTimeout(t);
+  }, [pathname]);
+
   if (loading || !user) {
     return (
       <div className="login-page">
-        <div className="muted">Loading…</div>
+        <PageLoader label="Preparing your workspace…" />
       </div>
     );
   }
@@ -62,6 +72,14 @@ export function AppShell({ children }: { children: ReactNode }) {
     ...(user.role === 'administrator' || user.role === 'owner' ? admin : []),
     ...(user.role === 'owner' ? owner : []),
   ];
+
+  function go(href: string) {
+    if (href === pathname) return;
+    window.dispatchEvent(new Event('app:route-start'));
+    startTransition(() => {
+      router.push(href);
+    });
+  }
 
   return (
     <div className="app-shell">
@@ -74,20 +92,39 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
         <nav className="nav">
           {links.map((l) => (
-            <Link
+            <a
               key={l.href}
               href={l.href}
               className={pathname === l.href || pathname.startsWith(l.href + '/') ? 'active' : ''}
+              onClick={(e) => {
+                e.preventDefault();
+                go(l.href);
+              }}
             >
               {l.label}
-            </Link>
+            </a>
           ))}
         </nav>
-        <button className="btn secondary" style={{ marginTop: 'auto', color: 'white', borderColor: 'rgba(255,255,255,0.2)' }} onClick={() => logout().then(() => router.push('/login'))}>
+        <button
+          className="btn secondary"
+          style={{ marginTop: 'auto', color: 'white', borderColor: 'rgba(255,255,255,0.2)' }}
+          onClick={() =>
+            logout().then(() => {
+              router.push('/login');
+            })
+          }
+        >
           Log out
         </button>
       </aside>
-      <main className="main">{children}</main>
+      <main className={`main ${navigating ? 'main-navigating' : ''}`}>
+        {navigating && (
+          <div className="route-veil">
+            <div className="loader-ring sm" />
+          </div>
+        )}
+        <div className={navigating ? 'main-content dimmed' : 'main-content'}>{children}</div>
+      </main>
     </div>
   );
 }

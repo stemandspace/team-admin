@@ -84,3 +84,10 @@ leaveRouter.post(
     res.json(await leave.decideLeave(req.user!, param(req, 'id'), decision, req.body.comment));
   }),
 );
+
+leaveRouter.delete(
+  '/:id',
+  asyncHandler(async (req, res) => {
+    res.json(await leave.deleteLeaveRequest(req.user!, param(req, 'id')));
+  }),
+);

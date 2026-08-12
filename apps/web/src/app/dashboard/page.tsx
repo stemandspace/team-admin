@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { AppShell } from '@/components/AppShell';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { PageLoader } from '@/lib/loading';
 
 type HomeData = {
   today: {
@@ -28,11 +29,14 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const [data, setData] = useState<HomeData | null>(null);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api<HomeData>('/dashboard/home')
+    setLoading(true);
+    api<HomeData>('/dashboard/home', { loadingLabel: 'Loading dashboard…' })
       .then(setData)
-      .catch((e) => setError(e.message));
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false));
   }, []);
 
   return (
@@ -44,7 +48,8 @@ export default function DashboardPage() {
         </div>
       </div>
       {error && <div className="error">{error}</div>}
-      {data && (
+      {loading && <PageLoader label="Loading your day…" />}
+      {!loading && data && (
         <div className="grid grid-3">
           <div className="card">
             <h3>Punch status</h3>
