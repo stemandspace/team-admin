@@ -72,3 +72,15 @@ export type ClientType = (typeof CLIENT_TYPES)[number];
 
 export const LIFECYCLE_STATUSES = ['prospect', 'active_client', 'dormant', 'lost'] as const;
 export type LifecycleStatus = (typeof LIFECYCLE_STATUSES)[number];
+
+export const PROGRAM_FAMILIES = [
+  'workshop',
+  'project',
+  'olympiad',
+  'challenge',
+  'other',
+] as const;
+export type ProgramFamily = (typeof PROGRAM_FAMILIES)[number];
+
+export const AUDIENCES = ['school', 'retail_direct_parent'] as const;
+export type Audience = (typeof AUDIENCES)[number];

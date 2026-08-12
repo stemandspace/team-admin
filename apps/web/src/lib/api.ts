@@ -17,7 +17,20 @@ export type ApiOptions = RequestInit & {
   overlay?: boolean;
   /** Custom overlay / progress label */
   loadingLabel?: string;
+  /** Do not redirect on 401 (used by login / session probe) */
+  skipAuthRedirect?: boolean;
 };
+
+export class ApiError extends Error {
+  status: number;
+  data: Record<string, unknown>;
+  constructor(message: string, status: number, data: Record<string, unknown> = {}) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.data = data;
+  }
+}
 
 function getToken(): string | null {
   if (typeof window === 'undefined') return null;
@@ -28,6 +41,21 @@ export function setToken(token: string | null) {
   if (typeof window === 'undefined') return;
   if (token) localStorage.setItem('token', token);
   else localStorage.removeItem('token');
+}
+
+export function clearSession() {
+  setToken(null);
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('app:session-expired'));
+  }
+}
+
+function redirectToLogin() {
+  if (typeof window === 'undefined') return;
+  const path = window.location.pathname;
+  if (path === '/login') return;
+  const next = `${path}${window.location.search || ''}`;
+  window.location.replace(`/login?next=${encodeURIComponent(next)}`);
 }
 
 async function withLoading<T>(
@@ -56,7 +84,7 @@ async function withLoading<T>(
 }
 
 export async function api<T = any>(path: string, options: ApiOptions = {}): Promise<T> {
-  const { silent, overlay, loadingLabel, ...fetchOptions } = options;
+  const { silent, overlay, loadingLabel, skipAuthRedirect, ...fetchOptions } = options;
   const method = (fetchOptions.method || 'GET').toUpperCase();
 
   return withLoading(method, path, options, async () => {
@@ -75,7 +103,19 @@ export async function api<T = any>(path: string, options: ApiOptions = {}): Prom
 
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      throw new Error(data.error || `Request failed (${res.status})`);
+      if (res.status === 401) {
+        const isAuthRoute = path.startsWith('/auth/login') || path.startsWith('/auth/me');
+        clearSession();
+        if (!skipAuthRedirect && !isAuthRoute) {
+          redirectToLogin();
+        }
+        throw new ApiError(data.error || 'Unauthorized', 401);
+      }
+      throw new ApiError(
+        data.error || data.message || `Request failed (${res.status})`,
+        res.status,
+        typeof data === 'object' && data ? data : {},
+      );
     }
     return data as T;
   });

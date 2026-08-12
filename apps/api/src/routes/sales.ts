@@ -3,6 +3,7 @@ import { prisma, ActivityAction, OpportunityStage } from '@team-admin/db';
 import {
   opportunitySchema,
   interactionSchema,
+  programSchema,
   canSeeOpportunity,
 } from '@team-admin/shared';
 import { asyncHandler, AppError } from '../middleware/error';
@@ -29,8 +30,196 @@ salesRouter.use(requireCommercialAccess);
 
 salesRouter.get(
   '/programs',
-  asyncHandler(async (_req, res) => {
-    res.json(await prisma.program.findMany({ where: { isActive: true } }));
+  asyncHandler(async (req, res) => {
+    const includeInactive = String(req.query.includeInactive || '') === '1';
+    const q = req.query.q ? String(req.query.q).trim() : '';
+    const rows = await prisma.program.findMany({
+      where: {
+        ...(includeInactive ? {} : { isActive: true }),
+        ...(q ? { name: { contains: q, mode: 'insensitive' } } : {}),
+      },
+      include: {
+        _count: {
+          select: { opportunities: true, engagements: true, salesTargets: true },
+        },
+      },
+      orderBy: { name: 'asc' },
+    });
+    res.json(rows);
+  }),
+);
+
+salesRouter.get(
+  '/programs/:id',
+  asyncHandler(async (req, res) => {
+    const program = await prisma.program.findUnique({
+      where: { id: param(req, 'id') },
+      include: {
+        _count: {
+          select: { opportunities: true, engagements: true, salesTargets: true },
+        },
+      },
+    });
+    if (!program) throw new AppError('Program not found', 404);
+    res.json(program);
+  }),
+);
+
+salesRouter.post(
+  '/programs',
+  asyncHandler(async (req, res) => {
+    const parsed = programSchema.safeParse({
+      ...req.body,
+      defaultPrice:
+        req.body.defaultPrice === '' || req.body.defaultPrice == null
+          ? null
+          : Number(req.body.defaultPrice),
+      mapsToWorkshopCategory: req.body.mapsToWorkshopCategory || null,
+      priceUnit: req.body.priceUnit || null,
+    });
+    if (!parsed.success) throw new AppError(parsed.error.message);
+
+    const clash = await prisma.program.findFirst({
+      where: { name: { equals: parsed.data.name, mode: 'insensitive' } },
+    });
+    if (clash) throw new AppError('A program with this name already exists', 409);
+
+    const program = await prisma.program.create({
+      data: {
+        name: parsed.data.name.trim(),
+        programFamily: parsed.data.programFamily,
+        audience: parsed.data.audience,
+        deliveryModeSupported: parsed.data.deliveryModeSupported,
+        defaultPrice: parsed.data.defaultPrice ?? null,
+        priceUnit: parsed.data.priceUnit?.trim() || null,
+        mapsToWorkshopCategory: parsed.data.mapsToWorkshopCategory ?? null,
+        isActive: parsed.data.isActive ?? true,
+      },
+    });
+
+    await logActivity({
+      actor: req.user!,
+      action: ActivityAction.insert,
+      tableName: 'programs',
+      recordId: program.id,
+      newValue: { name: program.name },
+    });
+
+    res.status(201).json(program);
+  }),
+);
+
+salesRouter.patch(
+  '/programs/:id',
+  asyncHandler(async (req, res) => {
+    const id = param(req, 'id');
+    const existing = await prisma.program.findUnique({ where: { id } });
+    if (!existing) throw new AppError('Program not found', 404);
+
+    const parsed = programSchema.safeParse({
+      ...req.body,
+      defaultPrice:
+        req.body.defaultPrice === '' || req.body.defaultPrice == null
+          ? null
+          : Number(req.body.defaultPrice),
+      mapsToWorkshopCategory: req.body.mapsToWorkshopCategory || null,
+      priceUnit: req.body.priceUnit || null,
+    });
+    if (!parsed.success) throw new AppError(parsed.error.message);
+
+    const clash = await prisma.program.findFirst({
+      where: {
+        id: { not: id },
+        name: { equals: parsed.data.name, mode: 'insensitive' },
+      },
+    });
+    if (clash) throw new AppError('A program with this name already exists', 409);
+
+    const updated = await prisma.program.update({
+      where: { id },
+      data: {
+        name: parsed.data.name.trim(),
+        programFamily: parsed.data.programFamily,
+        audience: parsed.data.audience,
+        deliveryModeSupported: parsed.data.deliveryModeSupported,
+        defaultPrice: parsed.data.defaultPrice ?? null,
+        priceUnit: parsed.data.priceUnit?.trim() || null,
+        mapsToWorkshopCategory: parsed.data.mapsToWorkshopCategory ?? null,
+        ...(typeof parsed.data.isActive === 'boolean'
+          ? { isActive: parsed.data.isActive }
+          : {}),
+      },
+    });
+
+    await logActivity({
+      actor: req.user!,
+      action: ActivityAction.update,
+      tableName: 'programs',
+      recordId: id,
+      oldValue: existing,
+      newValue: updated,
+    });
+
+    res.json(updated);
+  }),
+);
+
+salesRouter.delete(
+  '/programs/:id',
+  asyncHandler(async (req, res) => {
+    const id = param(req, 'id');
+    const existing = await prisma.program.findUnique({
+      where: { id },
+      include: {
+        _count: {
+          select: { opportunities: true, engagements: true, salesTargets: true },
+        },
+      },
+    });
+    if (!existing) throw new AppError('Program not found', 404);
+
+    const linked =
+      existing._count.opportunities +
+      existing._count.engagements +
+      existing._count.salesTargets;
+
+    // Soft-deactivate by default; hard delete only when unused and force=1
+    const force = String(req.query.force || '') === '1';
+    if (linked > 0 || !force) {
+      const updated = await prisma.program.update({
+        where: { id },
+        data: { isActive: false },
+      });
+      await logActivity({
+        actor: req.user!,
+        action: ActivityAction.update,
+        tableName: 'programs',
+        recordId: id,
+        reason:
+          linked > 0
+            ? 'Deactivated because linked records exist'
+            : 'Deactivated program',
+        newValue: { isActive: false },
+      });
+      return res.json({
+        softDeleted: true,
+        program: updated,
+        message:
+          linked > 0
+            ? 'Program has linked records, so it was deactivated instead of deleted.'
+            : 'Program deactivated.',
+      });
+    }
+
+    await prisma.program.delete({ where: { id } });
+    await logActivity({
+      actor: req.user!,
+      action: ActivityAction.void,
+      tableName: 'programs',
+      recordId: id,
+      oldValue: { name: existing.name },
+    });
+    res.json({ ok: true, deleted: true });
   }),
 );
 

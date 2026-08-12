@@ -1,9 +1,11 @@
 import { z } from 'zod';
 import {
   ASSIGNMENT_ROLES,
+  AUDIENCES,
   CLIENT_TYPES,
   LEAVE_TYPES,
   OPPORTUNITY_STAGES,
+  PROGRAM_FAMILIES,
   ROLES,
   TEAMS,
   WORKSHOP_CATEGORIES,
@@ -115,8 +117,23 @@ export const clientSchema = z.object({
     .default('Not applicable'),
   contactPerson: z.string().optional().nullable(),
   contactPhone: z.string().optional().nullable(),
-  contactEmail: z.string().email().optional().nullable(),
+  contactEmail: z
+    .union([z.string().email(), z.literal('')])
+    .optional()
+    .nullable()
+    .transform((v) => (v === '' || v == null ? null : v)),
   source: z.string().optional().nullable(),
+});
+
+export const programSchema = z.object({
+  name: z.string().min(2),
+  programFamily: z.enum(PROGRAM_FAMILIES),
+  audience: z.enum(AUDIENCES),
+  deliveryModeSupported: z.enum(['online', 'offline', 'both']).default('both'),
+  defaultPrice: z.number().nonnegative().optional().nullable(),
+  priceUnit: z.string().optional().nullable(),
+  mapsToWorkshopCategory: z.enum(WORKSHOP_CATEGORIES).optional().nullable(),
+  isActive: z.boolean().optional(),
 });
 
 export const opportunitySchema = z.object({

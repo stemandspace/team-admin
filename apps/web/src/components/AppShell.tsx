@@ -66,6 +66,8 @@ export function AppShell({ children }: { children: ReactNode }) {
         label: 'Sales',
         items: [
           { href: '/sales', label: 'Pipeline' },
+          { href: '/sales/clients', label: 'Clients' },
+          { href: '/sales/programs', label: 'Programs' },
           { href: '/sales/follow-ups', label: 'Follow-ups' },
           { href: '/sales/capacity', label: 'Capacity' },
         ],
@@ -80,6 +82,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           { href: '/admin/attendance', label: 'Team Attendance' },
           { href: '/admin/approvals', label: 'Approvals' },
           { href: '/admin/workshops', label: 'Workshop Scheduler' },
+          { href: '/admin/clients', label: 'Clients' },
+          { href: '/admin/programs', label: 'Programs' },
           { href: '/admin/people', label: 'People' },
           { href: '/admin/settings', label: 'Settings' },
           { href: '/admin/compliance', label: 'Compliance' },
@@ -103,7 +107,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [user]);
 
   useEffect(() => {
-    if (!loading && !user) router.replace('/login');
+    if (!loading && !user) {
+      router.replace('/login');
+    }
   }, [loading, user, router]);
 
   useEffect(() => {

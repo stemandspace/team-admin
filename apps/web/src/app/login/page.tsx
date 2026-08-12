@@ -1,7 +1,7 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { FormEvent, Suspense, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { PageLoader } from '@/lib/loading';
 
@@ -43,23 +43,35 @@ const DEMO_USERS = [
   },
 ] as const;
 
-export default function LoginPage() {
+function safeNextPath(raw: string | null) {
+  if (!raw || !raw.startsWith('/') || raw.startsWith('//') || raw.startsWith('/login')) {
+    return '/dashboard';
+  }
+  return raw;
+}
+
+function LoginForm() {
   const { login, user, loading } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [showCreds, setShowCreds] = useState(false);
 
-  if (!loading && user) {
-    router.replace('/dashboard');
-  }
+  const nextPath = safeNextPath(searchParams.get('next'));
 
-  if (loading) {
+  useEffect(() => {
+    if (!loading && user) {
+      router.replace(nextPath);
+    }
+  }, [loading, user, router, nextPath]);
+
+  if (loading || user) {
     return (
       <div className="login-page">
-        <PageLoader label="Checking session…" />
+        <PageLoader label={user ? 'Redirecting…' : 'Checking session…'} />
       </div>
     );
   }
@@ -72,7 +84,7 @@ export default function LoginPage() {
     try {
       await login(nextEmail, nextPassword);
       setShowCreds(false);
-      router.push('/dashboard');
+      router.replace(nextPath);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {
@@ -137,10 +149,7 @@ export default function LoginPage() {
       </div>
 
       {showCreds && (
-        <div
-          className="modal-backdrop"
-          onClick={() => !busy && setShowCreds(false)}
-        >
+        <div className="modal-backdrop" onClick={() => !busy && setShowCreds(false)}>
           <div
             className="modal-card demo-creds-modal"
             role="dialog"
@@ -198,5 +207,19 @@ export default function LoginPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="login-page">
+          <PageLoader label="Loading…" />
+        </div>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   );
 }
