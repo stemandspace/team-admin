@@ -14,6 +14,5 @@ uploads
 _spec_extract.txt
 coverage
 .turbo
-apps/web
 **/*.log
 .DS_Store
