@@ -69,6 +69,37 @@ npm run dev:web
 |---|---|
 | `npm run dev:api` | Express API |
 | `npm run dev:web` | Next.js UI |
+| `npm run build:api` | Build shared + db + API for production |
+| `npm run start:api` | Sync schema (`db push`) + start API |
 | `npm run db:push` | Push Prisma schema |
 | `npm run db:seed` | Seed policies, programs, demo users |
 | `npm run db:generate` | Prisma client |
+
+## Railway (API)
+
+1. Create a Railway project with a **Postgres** plugin and an empty **service** for the API.
+2. Connect this GitHub repo. Set:
+   - **Root Directory**: `/`
+   - **Builder**: Dockerfile
+   - **Dockerfile path**: `apps/api/Dockerfile`  
+   (or use the root `railway.toml`)
+3. Variables (Variables tab):
+
+| Variable | Value |
+|---|---|
+| `DATABASE_URL` | Reference the Postgres `DATABASE_URL` (add `?sslmode=require` if missing) |
+| `JWT_SECRET` | Long random string |
+| `CORS_ORIGIN` | Your web origin(s), comma-separated |
+| `NODE_ENV` | `production` |
+| `UPLOAD_DIR` | `/tmp/uploads` (ephemeral; replace with object storage later) |
+
+`PORT` and `HOST` are handled automatically.
+
+4. Health check path: `/health` (includes a DB ping).
+5. After first deploy, run seed once (Railway shell or local against prod DB):
+
+```bash
+DATABASE_URL="…" npm run db:seed
+```
+
+6. Point the web app’s `NEXT_PUBLIC_API_URL` at the Railway API public URL.

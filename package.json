@@ -8,10 +8,14 @@
   "scripts": {
     "dev": "npm run dev --workspaces --if-present",
     "dev:web": "npm run dev -w @team-admin/web",
-    "dev:api": "npm run dev -w @team-admin/api",
+    "dev:api": "npm run build:api:deps && npm run dev -w @team-admin/api",
     "build": "npm run build -w @team-admin/shared && npm run build -w @team-admin/db && npm run build -w @team-admin/api && npm run build -w @team-admin/web",
+    "build:api:deps": "npm run build -w @team-admin/shared && npm run build -w @team-admin/db",
+    "build:api": "npm run build:api:deps && npm run build -w @team-admin/api",
+    "start:api": "npm run deploy -w @team-admin/db && npm run start -w @team-admin/api",
     "db:generate": "npm run generate -w @team-admin/db",
     "db:push": "npm run push -w @team-admin/db",
+    "db:deploy": "npm run deploy -w @team-admin/db",
     "db:seed": "npm run seed -w @team-admin/db",
     "db:migrate": "npm run migrate -w @team-admin/db"
   },

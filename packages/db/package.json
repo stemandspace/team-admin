@@ -2,28 +2,37 @@
   "name": "@team-admin/db",
   "version": "0.1.0",
   "private": true,
-  "main": "./src/index.ts",
-  "types": "./src/index.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
   },
+  "files": [
+    "dist",
+    "prisma"
+  ],
   "scripts": {
     "generate": "prisma generate",
     "push": "prisma db push",
+    "deploy": "prisma db push",
     "migrate": "prisma migrate dev",
     "seed": "tsx prisma/seed.ts",
-    "build": "tsc"
+    "build": "prisma generate && tsc"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
-    "@prisma/client": "^6.5.0"
+    "@prisma/client": "^6.5.0",
+    "prisma": "^6.5.0"
   },
   "devDependencies": {
     "bcryptjs": "^3.0.2",
     "@types/bcryptjs": "^2.4.6",
-    "prisma": "^6.5.0",
     "tsx": "^4.19.3",
     "typescript": "^5.8.2"
   }

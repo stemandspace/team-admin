@@ -1,0 +1,13 @@
+# Railway config for the API service (apply from monorepo root).
+# Dashboard: Root Directory = / , or link this file as the service config.
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "apps/api/Dockerfile"
+
+[deploy]
+startCommand = "npm run start:api"
+healthcheckPath = "/health"
+healthcheckTimeout = 30
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5
