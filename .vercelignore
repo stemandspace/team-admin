@@ -1,0 +1,18 @@
+# Keep Vercel builds lean — API / Docker / local artifacts are unused
+apps/api
+**/.env
+**/.env.*
+!**/.env.example
+**/uploads
+**/.next
+**/dist
+.git
+.github
+.cursor
+_spec_extract.txt
+coverage
+.turbo
+Dockerfile
+**/Dockerfile
+railway.toml
+.dockerignore

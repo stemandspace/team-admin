@@ -70,6 +70,7 @@ npm run dev:web
 | `npm run dev:api` | Express API |
 | `npm run dev:web` | Next.js UI |
 | `npm run build:api` | Build shared + db + API for production |
+| `npm run build:web` | Build shared + Next.js web for production |
 | `npm run start:api` | Sync schema (`db push`) + start API |
 | `npm run db:push` | Push Prisma schema |
 | `npm run db:seed` | Seed policies, programs, demo users |
@@ -95,11 +96,34 @@ npm run dev:web
 
 `PORT` and `HOST` are handled automatically.
 
-4. Health check path: `/health` (includes a DB ping).
-5. After first deploy, run seed once (Railway shell or local against prod DB):
+4. After first deploy, run seed once (Railway shell or local against prod DB):
 
 ```bash
 DATABASE_URL="…" npm run db:seed
 ```
 
-6. Point the web app’s `NEXT_PUBLIC_API_URL` at the Railway API public URL.
+5. Point the web app’s `NEXT_PUBLIC_API_URL` at the Railway API public URL (see Vercel below).
+
+## Vercel (Web)
+
+1. Import this GitHub repo in [Vercel](https://vercel.com).
+2. Project settings:
+   - **Framework Preset**: Next.js
+   - **Root Directory**: `apps/web`
+   - Install/Build commands come from `apps/web/vercel.json` (monorepo install + `build:web`)
+3. Environment variable (Production + Preview):
+
+| Variable | Value |
+|---|---|
+| `NEXT_PUBLIC_API_URL` | Your Railway API public URL, e.g. `https://….up.railway.app` (no trailing slash) |
+
+4. Deploy. Copy the Vercel URL (e.g. `https://team-admin.vercel.app`).
+5. On Railway API, set:
+
+```text
+CORS_ORIGIN=https://team-admin.vercel.app,http://localhost:3000
+```
+
+Include preview URLs too if you use them (comma-separated). Redeploy the API after changing CORS.
+
+6. Local web env: copy `apps/web/.env.example` → `apps/web/.env.local`.
