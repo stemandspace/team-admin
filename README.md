@@ -1,4 +1,4 @@
-# Workshop Operations System
+# Workshop Operations System 1
 
 Internal ops platform for educational workshop organisations — **Attendance & Leave**, **Workshop Delivery**, and **Sales**, sharing one availability spine (`day_record`).
 
