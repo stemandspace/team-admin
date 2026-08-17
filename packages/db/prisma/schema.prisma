@@ -181,6 +181,16 @@ enum ShortAbsenceStatus {
 }
 
 enum OpportunityStage {
+  lead
+  contacted
+  requirements
+  proposal_sent
+  follow_up
+  won
+  on_hold
+  lost
+  dead
+  // legacy values retained for existing rows / gradual migration
   exploratory
   interested
   proposal_shared
@@ -188,11 +198,13 @@ enum OpportunityStage {
   registered
   completed
   not_interested
-  lost
 }
 
 enum ProgramFamily {
   workshop
+  iasc
+  nac
+  explorium
   project
   olympiad
   challenge
@@ -202,6 +214,45 @@ enum ProgramFamily {
 enum Audience {
   school
   retail_direct_parent
+}
+
+enum LeadSource {
+  inbound
+  outbound
+}
+
+enum ProposalStatus {
+  not_sent
+  sent
+  revised
+  accepted
+  rejected
+  negotiated
+}
+
+enum ContactRole {
+  decision_maker
+  coordinator
+  other
+}
+
+enum SalesActivityType {
+  new_lead
+  contact
+  conversation
+  follow_up
+  product_activity
+  proposal_sent
+  proposal_revised
+  stage_change
+  registration
+  order
+  won
+  lost
+  on_hold
+  ownership_change
+  duplicate_blocked
+  nil_report
 }
 
 enum CommunicationMode {
@@ -218,6 +269,10 @@ enum InteractionType {
   follow_up
   proposal_discussion
   registration_discussion
+  requirement_discussion
+  commercial_discussion
+  negotiation
+  client_decision
 }
 
 enum InteractionOutcome {
@@ -228,6 +283,7 @@ enum InteractionOutcome {
   neutral
   negative
   callback_requested
+  cancelled_meeting
 }
 
 enum ActivityAction {
@@ -321,8 +377,13 @@ model Person {
   activityLogs            ActivityLog[]              @relation("ActivityActor")
   notifications           Notification[]
   opportunitiesOwned      Opportunity[]              @relation("OpportunityOwner")
+  opportunitiesCredited   Opportunity[]              @relation("OpportunityCredited")
   interactions            Interaction[]
   salesTargets            SalesTarget[]
+  salesActivities         SalesActivityEvent[]
+  relationshipOwnerships  RelationshipOwnership[]
+  achievementAdjustments  AchievementAdjustment[]
+  nilReports              NilReport[]
   trips                   Trip[]
   advances                Advance[]
   expenseClaims           ExpenseClaim[]             @relation("ClaimSubmitter")
@@ -493,12 +554,15 @@ model Client {
   clientType      ClientType
   city            String
   state           String
+  branch          String?
   board           BoardType       @default(Not_applicable)
   contactPerson   String?
   contactPhone    String?
   contactEmail    String?
   source          String?
   lifecycleStatus LifecycleStatus @default(prospect)
+  isNewSchool     Boolean         @default(true)
+  firstWonAt      DateTime?
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
 
@@ -506,6 +570,11 @@ model Client {
   workshops     Workshop[]
   contacts      Contact[]
   opportunities Opportunity[]
+  salesActivities SalesActivityEvent[]
+  ownerships    RelationshipOwnership[]
+
+  @@index([name, city])
+  @@index([contactPhone])
 }
 
 model Engagement {
@@ -765,26 +834,30 @@ model Program {
   opportunities Opportunity[]
   salesTargets  SalesTarget[]
   engagements   Engagement[]
+  salesActivities SalesActivityEvent[]
 }
 
 model Contact {
-  id                String   @id @default(uuid())
+  id                String      @id @default(uuid())
   clientId          String
-  client            Client   @relation(fields: [clientId], references: [id])
+  client            Client      @relation(fields: [clientId], references: [id])
   name              String
   designation       String?
   mobile            String?
   email             String?
-  isPrimary         Boolean  @default(false)
-  isActive          Boolean  @default(true)
+  contactRole       ContactRole @default(other)
+  isPrimary         Boolean     @default(false)
+  isActive          Boolean     @default(true)
   preferredChannel  String?
   notes             String?
   createdById       String?
-  createdBy         Person?  @relation(fields: [createdById], references: [id])
-  createdAt         DateTime @default(now())
+  createdBy         Person?     @relation(fields: [createdById], references: [id])
+  createdAt         DateTime    @default(now())
 
   opportunities Opportunity[]
   interactions  Interaction[]
+  decisionMakerFor Opportunity[] @relation("DecisionMaker")
+  coordinatorFor   Opportunity[] @relation("Coordinator")
 }
 
 model Opportunity {
@@ -793,31 +866,58 @@ model Opportunity {
   client                        Client           @relation(fields: [clientId], references: [id])
   contactId                     String?
   contact                       Contact?         @relation(fields: [contactId], references: [id])
+  decisionMakerContactId        String?
+  decisionMaker                 Contact?         @relation("DecisionMaker", fields: [decisionMakerContactId], references: [id])
+  coordinatorContactId          String?
+  coordinator                   Contact?         @relation("Coordinator", fields: [coordinatorContactId], references: [id])
   programId                     String
   program                       Program          @relation(fields: [programId], references: [id])
   ownerPersonId                 String
   owner                         Person           @relation("OpportunityOwner", fields: [ownerPersonId], references: [id])
-  stage                         OpportunityStage @default(exploratory)
+  creditedPersonId              String?
+  creditedPerson                Person?          @relation("OpportunityCredited", fields: [creditedPersonId], references: [id])
+  stage                         OpportunityStage @default(lead)
+  leadSource                    LeadSource       @default(outbound)
+  probability                   Int              @default(25)
   expectedValue                 Float            @default(0)
+  quotedValue                   Float?
+  proposalAmount                Float?
+  actualValue                   Float?
   expectedStudents              Int?
+  expectedRegistrations         Int?
   expectedCloseDate             DateTime?        @db.Date
   expectedDeliveryWindowStart   DateTime?        @db.Date
   expectedDeliveryWindowEnd     DateTime?        @db.Date
+  proposalStatus                ProposalStatus   @default(not_sent)
+  proposalSentAt                DateTime?
+  productConfig                 Json?
+  nextAction                    String?
   lostReason                    String?
   lostTo                        String?
+  onHoldReason                  String?
+  onHoldReopenMonth             DateTime?        @db.Date
   linkedEngagementId            String?
   linkedEngagement              Engagement?      @relation(fields: [linkedEngagementId], references: [id])
+  priorOpportunityId            String?
+  priorOpportunity              Opportunity?     @relation("OpportunityHistory", fields: [priorOpportunityId], references: [id])
+  successorOpportunities        Opportunity[]    @relation("OpportunityHistory")
   createdAt                     DateTime         @default(now())
+  updatedAt                     DateTime         @default(now()) @updatedAt
   lastInteractionAt             DateTime?
+  lastQualifyingActivityAt      DateTime?
   dormantSince                  DateTime?
+  ownershipExpiresAt            DateTime?
   reassignedFromPersonId        String?
   reassignedAt                  DateTime?
   reassignmentReason            String?
   isLocked                      Boolean          @default(false)
 
-  interactions Interaction[]
+  interactions    Interaction[]
+  salesActivities SalesActivityEvent[]
 
-  @@unique([clientId, programId])
+  @@index([ownerPersonId, stage])
+  @@index([clientId, programId, stage])
+  @@index([lastQualifyingActivityAt])
 }
 
 model Interaction {
@@ -832,6 +932,8 @@ model Interaction {
   interactionType          InteractionType
   outcome                  InteractionOutcome
   notes                    String
+  nextAction               String?
+  isQualifying             Boolean           @default(false)
   stageBefore              OpportunityStage?
   stageAfter               OpportunityStage?
   nextFollowUpDate         DateTime?         @db.Date
@@ -840,6 +942,71 @@ model Interaction {
   followUpCompleted        Boolean           @default(false)
   completedByInteractionId String?
   isLocked                 Boolean           @default(true)
+}
+
+model SalesActivityEvent {
+  id              String            @id @default(uuid())
+  occurredAt      DateTime          @default(now())
+  personId        String
+  person          Person            @relation(fields: [personId], references: [id])
+  clientId        String?
+  client          Client?           @relation(fields: [clientId], references: [id])
+  opportunityId   String?
+  opportunity     Opportunity?      @relation(fields: [opportunityId], references: [id])
+  programId       String?
+  program         Program?          @relation(fields: [programId], references: [id])
+  activityType    SalesActivityType
+  channel         String?
+  productFamily   String?
+  stage           OpportunityStage?
+  nextAction      String?
+  summary         String
+  metadata        Json?
+
+  @@index([occurredAt])
+  @@index([personId, occurredAt])
+  @@index([clientId, occurredAt])
+}
+
+model RelationshipOwnership {
+  id              String   @id @default(uuid())
+  clientId        String
+  client          Client   @relation(fields: [clientId], references: [id])
+  ownerPersonId   String
+  owner           Person   @relation(fields: [ownerPersonId], references: [id])
+  programFamily   String?
+  sourceSchoolId  String?
+  startedAt       DateTime @default(now())
+  expiresAt       DateTime
+  lastQualifyingAt DateTime @default(now())
+  isActive        Boolean  @default(true)
+  notes           String?
+
+  @@index([clientId, isActive])
+  @@index([ownerPersonId, expiresAt])
+}
+
+model AchievementAdjustment {
+  id              String   @id @default(uuid())
+  opportunityId   String?
+  personId        String
+  person          Person   @relation(fields: [personId], references: [id])
+  amount          Float
+  reason          String
+  adjustmentDate  DateTime @db.Date
+  createdById     String?
+  createdAt       DateTime @default(now())
+}
+
+model NilReport {
+  id          String   @id @default(uuid())
+  personId    String
+  person      Person   @relation(fields: [personId], references: [id])
+  date        DateTime @db.Date
+  reason      String
+  createdAt   DateTime @default(now())
+
+  @@unique([personId, date])
 }
 
 model SalesTarget {
@@ -851,6 +1018,8 @@ model SalesTarget {
   program             Program? @relation(fields: [programId], references: [id])
   targetValue         Float
   targetRegistrations Int?
+  targetNewSchools    Int?
+  periodType          String   @default("month")
   setById             String?
   setAt               DateTime @default(now())
   effectiveFrom       DateTime @default(now()) @db.Date
@@ -987,16 +1156,18 @@ model ConductRecord {
 }
 
 model UnavailabilityRequest {
-  id            String         @id @default(uuid())
-  personId      String
-  person        Person         @relation("UnavailPerson", fields: [personId], references: [id])
-  fromDate      DateTime       @db.Date
-  toDate        DateTime       @db.Date
-  reason        String
-  status        ApprovalStatus @default(pending)
-  reviewedById  String?
-  reviewedBy    Person?        @relation("UnavailReviewer", fields: [reviewedById], references: [id])
-  reviewedAt    DateTime?
+  id              String         @id @default(uuid())
+  personId        String
+  person          Person         @relation("UnavailPerson", fields: [personId], references: [id])
+  fromDate        DateTime       @db.Date
+  toDate          DateTime       @db.Date
+  startDateTime   DateTime?
+  endDateTime     DateTime?
+  reason          String
+  status          ApprovalStatus @default(pending)
+  reviewedById    String?
+  reviewedBy      Person?        @relation("UnavailReviewer", fields: [reviewedById], references: [id])
+  reviewedAt      DateTime?
   reviewerComment String?
-  createdAt     DateTime       @default(now())
+  createdAt       DateTime       @default(now())
 }

@@ -3,9 +3,16 @@ import {
   ASSIGNMENT_ROLES,
   AUDIENCES,
   CLIENT_TYPES,
+  COMMUNICATION_MODES,
+  CONTACT_ROLES,
+  INTERACTION_OUTCOMES,
+  INTERACTION_TYPES,
+  LEAD_SOURCES,
   LEAVE_TYPES,
   OPPORTUNITY_STAGES,
+  PROBABILITIES,
   PROGRAM_FAMILIES,
+  PROPOSAL_STATUSES,
   ROLES,
   TEAMS,
   WORKSHOP_CATEGORIES,
@@ -112,6 +119,7 @@ export const clientSchema = z.object({
   clientType: z.enum(CLIENT_TYPES),
   city: z.string().min(1),
   state: z.string().min(1),
+  branch: z.string().optional().nullable(),
   board: z
     .enum(['CBSE', 'ICSE', 'State', 'Other', 'Not applicable'])
     .default('Not applicable'),
@@ -139,44 +147,72 @@ export const programSchema = z.object({
 export const opportunitySchema = z.object({
   clientId: z.string().uuid(),
   contactId: z.string().uuid().optional().nullable(),
+  decisionMakerContactId: z.string().uuid().optional().nullable(),
+  coordinatorContactId: z.string().uuid().optional().nullable(),
   programId: z.string().uuid(),
-  expectedValue: z.number().nonnegative(),
+  leadSource: z.enum(LEAD_SOURCES).default('outbound'),
+  probability: z.union([z.literal(25), z.literal(50), z.literal(75), z.literal(100)]).default(25),
+  expectedValue: z.number().nonnegative().default(0),
+  quotedValue: z.number().nonnegative().optional().nullable(),
   expectedStudents: z.number().int().nonnegative().optional().nullable(),
+  expectedRegistrations: z.number().int().nonnegative().optional().nullable(),
   expectedCloseDate: z.string().optional().nullable(),
   expectedDeliveryWindowStart: z.string().optional().nullable(),
   expectedDeliveryWindowEnd: z.string().optional().nullable(),
-  stage: z.enum(OPPORTUNITY_STAGES).default('exploratory'),
+  nextAction: z.string().optional().nullable(),
+  productConfig: z.record(z.unknown()).optional().nullable(),
+  priorOpportunityId: z.string().uuid().optional().nullable(),
+  stage: z.enum(OPPORTUNITY_STAGES).default('lead'),
+  overrideConflict: z.boolean().optional(),
+  overrideReason: z.string().optional().nullable(),
+});
+
+export const opportunityPatchSchema = opportunitySchema.partial().extend({
+  proposalStatus: z.enum(PROPOSAL_STATUSES).optional(),
+  proposalAmount: z.number().nonnegative().optional().nullable(),
+  markProposalSent: z.boolean().optional(),
+  onHoldReason: z.string().optional().nullable(),
+  onHoldReopenMonth: z.string().optional().nullable(),
+  lostReason: z.string().optional().nullable(),
+  actualValue: z.number().nonnegative().optional().nullable(),
 });
 
 export const interactionSchema = z.object({
   opportunityId: z.string().uuid(),
   contactId: z.string().uuid().optional().nullable(),
-  communicationMode: z.enum([
-    'phone',
-    'whatsapp',
-    'whatsapp_call',
-    'email',
-    'zoom',
-    'physical_meeting',
-  ]),
-  interactionType: z.enum([
-    'first_contact',
-    'follow_up',
-    'proposal_discussion',
-    'registration_discussion',
-  ]),
-  outcome: z.enum([
-    'connected',
-    'no_answer',
-    'dead_connect',
-    'positive',
-    'neutral',
-    'negative',
-    'callback_requested',
-  ]),
+  communicationMode: z.enum(COMMUNICATION_MODES),
+  interactionType: z.enum(INTERACTION_TYPES),
+  outcome: z.enum(INTERACTION_OUTCOMES),
   notes: z.string().min(1),
+  nextAction: z.string().optional().nullable(),
   nextFollowUpDate: z.string().optional().nullable(),
   stageAfter: z.enum(OPPORTUNITY_STAGES).optional().nullable(),
+});
+
+export const contactSchema = z.object({
+  clientId: z.string().uuid(),
+  name: z.string().min(2),
+  designation: z.string().optional().nullable(),
+  mobile: z.string().optional().nullable(),
+  email: z
+    .union([z.string().email(), z.literal('')])
+    .optional()
+    .nullable()
+    .transform((v) => (v === '' || v == null ? null : v)),
+  contactRole: z.enum(CONTACT_ROLES).default('other'),
+  isPrimary: z.boolean().optional(),
+  notes: z.string().optional().nullable(),
+});
+
+export const salesUnavailabilitySchema = z.object({
+  startDateTime: z.string().min(1),
+  endDateTime: z.string().min(1),
+  reason: z.string().min(3),
+});
+
+export const nilReportSchema = z.object({
+  date: z.string().min(1),
+  reason: z.string().min(10),
 });
 
 export const shortAbsenceSchema = z.object({

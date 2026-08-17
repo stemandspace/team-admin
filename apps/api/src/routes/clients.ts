@@ -23,6 +23,7 @@ function toClientPayload(data: {
   clientType: string;
   city: string;
   state: string;
+  branch?: string | null;
   board?: string;
   contactPerson?: string | null;
   contactPhone?: string | null;
@@ -34,6 +35,7 @@ function toClientPayload(data: {
     clientType: data.clientType as never,
     city: data.city.trim(),
     state: data.state.trim(),
+    branch: data.branch?.trim() || null,
     board: mapBoard(data.board),
     contactPerson: data.contactPerson?.trim() || null,
     contactPhone: data.contactPhone?.trim() || null,

@@ -339,11 +339,14 @@ export function ProgramsManager({
             onChange={(e) => setForm({ ...form, programFamily: e.target.value })}
             disabled={saving}
           >
-            <option value="workshop">Workshop</option>
-            <option value="project">Project</option>
-            <option value="olympiad">Olympiad</option>
-            <option value="challenge">Challenge</option>
-            <option value="other">Other</option>
+                  <option value="workshop">Workshop</option>
+                  <option value="iasc">IASC</option>
+                  <option value="nac">NAC</option>
+                  <option value="explorium">Explorium</option>
+                  <option value="project">Project</option>
+                  <option value="olympiad">Olympiad</option>
+                  <option value="challenge">Challenge</option>
+                  <option value="other">Other</option>
           </select>
         </label>
         <label className="field">

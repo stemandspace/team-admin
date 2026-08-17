@@ -12,6 +12,7 @@ export const COMMERCIAL_RESOURCES = [
   'interactions',
   'contacts',
   'sales_targets',
+  'sales_activity_events',
 ] as const;
 
 export function canAccessCommercialData(user: VisibilitySubject): boolean {
@@ -51,12 +52,28 @@ export function ownsRecord(user: VisibilitySubject, personId: string): boolean {
   return user.id === personId;
 }
 
-/** Sales employee sees own pipeline only; admin/owner see all */
+/**
+ * Release 1: shared sales visibility — all salespeople can SEE opportunities.
+ * Editing / closing / reassigning remains owner-only for others' records.
+ */
 export function canSeeOpportunity(
+  user: VisibilitySubject,
+  _ownerPersonId: string,
+): boolean {
+  return canAccessCommercialData(user);
+}
+
+/** Only owner of the record (or Owner role) may mutate commercial records */
+export function canEditOpportunity(
   user: VisibilitySubject,
   ownerPersonId: string,
 ): boolean {
   if (!canAccessCommercialData(user)) return false;
-  if (user.role === 'administrator' || user.role === 'owner') return true;
+  if (user.role === 'owner') return true;
+  if (user.role === 'administrator') return true; // reserved; Release 1 may disable later
   return user.id === ownerPersonId;
+}
+
+export function isSalesOwner(user: VisibilitySubject): boolean {
+  return user.role === 'owner';
 }

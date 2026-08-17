@@ -13,6 +13,7 @@ type ClientRow = {
   clientType: string;
   city: string;
   state: string;
+  branch?: string | null;
   board?: string;
   contactPerson?: string | null;
   contactPhone?: string | null;
@@ -27,6 +28,7 @@ const emptyForm = {
   clientType: 'school',
   city: '',
   state: '',
+  branch: '',
   board: 'Not applicable',
   contactPerson: '',
   contactPhone: '',
@@ -95,6 +97,7 @@ export function ClientsManager({
       clientType: c.clientType || 'school',
       city: c.city || '',
       state: c.state || '',
+      branch: c.branch || '',
       board: c.board === 'Not_applicable' ? 'Not applicable' : c.board || 'Not applicable',
       contactPerson: c.contactPerson || '',
       contactPhone: c.contactPhone || '',
@@ -203,6 +206,7 @@ export function ClientsManager({
             clientType: c.clientType,
             city: c.city,
             state: c.state,
+            branch: c.branch,
             board: c.board === 'Not_applicable' ? 'Not applicable' : c.board || 'Not applicable',
             contactPerson: c.contactPerson,
             contactPhone: c.contactPhone,
@@ -292,6 +296,11 @@ export function ClientsManager({
                     <td>
                       {c.city}
                       {c.state ? `, ${c.state}` : ''}
+                      {c.branch ? (
+                        <div className="muted" style={{ fontSize: 12 }}>
+                          {c.branch}
+                        </div>
+                      ) : null}
                     </td>
                     <td>
                       {c.contactPerson || '—'}
@@ -379,6 +388,15 @@ export function ClientsManager({
             value={form.city}
             onChange={(e) => setForm({ ...form, city: e.target.value })}
             required
+            disabled={saving}
+          />
+        </label>
+        <label className="field">
+          Branch (schools)
+          <input
+            value={form.branch}
+            onChange={(e) => setForm({ ...form, branch: e.target.value })}
+            placeholder="Separate branches = separate relationships"
             disabled={saving}
           />
         </label>

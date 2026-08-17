@@ -66,9 +66,13 @@ export function AppShell({ children }: { children: ReactNode }) {
         label: 'Sales',
         items: [
           { href: '/sales', label: 'Pipeline' },
+          { href: '/sales/feed', label: 'Activity Feed' },
+          { href: '/sales/dashboard', label: 'Dashboard' },
           { href: '/sales/clients', label: 'Clients' },
           { href: '/sales/programs', label: 'Programs' },
           { href: '/sales/follow-ups', label: 'Follow-ups' },
+          { href: '/sales/leave', label: 'Leave / Unavailable' },
+          { href: '/sales/rules', label: 'Rules & Governance' },
           { href: '/sales/capacity', label: 'Capacity' },
         ],
       });

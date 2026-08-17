@@ -128,13 +128,14 @@ async function main() {
   });
 
   const programs = [
-    { name: 'Workshops–Schools', programFamily: ProgramFamily.workshop, audience: Audience.school, mapsToWorkshopCategory: WorkshopCategory.school_paid },
-    { name: 'Workshops–Retail', programFamily: ProgramFamily.workshop, audience: Audience.retail_direct_parent, mapsToWorkshopCategory: WorkshopCategory.retail_paid },
-    { name: 'Projects–Schools', programFamily: ProgramFamily.project, audience: Audience.school, mapsToWorkshopCategory: WorkshopCategory.school_paid },
-    { name: 'Projects–Retail', programFamily: ProgramFamily.project, audience: Audience.retail_direct_parent, mapsToWorkshopCategory: WorkshopCategory.retail_paid },
-    { name: 'Olympiad', programFamily: ProgramFamily.olympiad, audience: Audience.school, mapsToWorkshopCategory: WorkshopCategory.school_paid },
-    { name: 'Challenge', programFamily: ProgramFamily.challenge, audience: Audience.school, mapsToWorkshopCategory: WorkshopCategory.school_paid },
-    { name: 'Other', programFamily: ProgramFamily.other, audience: Audience.school, mapsToWorkshopCategory: WorkshopCategory.demo_free },
+    { name: 'Workshop–Schools', programFamily: ProgramFamily.workshop, audience: Audience.school, mapsToWorkshopCategory: WorkshopCategory.school_paid, defaultPrice: null as number | null, priceUnit: 'per student' },
+    { name: 'Workshop–Retail', programFamily: ProgramFamily.workshop, audience: Audience.retail_direct_parent, mapsToWorkshopCategory: WorkshopCategory.retail_paid, defaultPrice: null, priceUnit: 'per student' },
+    { name: 'IASC–Schools', programFamily: ProgramFamily.iasc, audience: Audience.school, mapsToWorkshopCategory: WorkshopCategory.school_paid, defaultPrice: 2000, priceUnit: 'per registration' },
+    { name: 'IASC–Direct', programFamily: ProgramFamily.iasc, audience: Audience.retail_direct_parent, mapsToWorkshopCategory: WorkshopCategory.retail_paid, defaultPrice: 2000, priceUnit: 'per registration' },
+    { name: 'NAC–Schools', programFamily: ProgramFamily.nac, audience: Audience.school, mapsToWorkshopCategory: WorkshopCategory.school_paid, defaultPrice: 300, priceUnit: 'per participant' },
+    { name: 'NAC–Direct', programFamily: ProgramFamily.nac, audience: Audience.retail_direct_parent, mapsToWorkshopCategory: WorkshopCategory.retail_paid, defaultPrice: 500, priceUnit: 'per participant' },
+    { name: 'Explorium–Schools', programFamily: ProgramFamily.explorium, audience: Audience.school, mapsToWorkshopCategory: WorkshopCategory.school_paid, defaultPrice: 499, priceUnit: 'per book/pack' },
+    { name: 'Explorium–Direct', programFamily: ProgramFamily.explorium, audience: Audience.retail_direct_parent, mapsToWorkshopCategory: WorkshopCategory.retail_paid, defaultPrice: 499, priceUnit: 'per book/pack' },
   ];
 
   for (const p of programs) {
@@ -142,11 +143,36 @@ async function main() {
     if (!exists) {
       await prisma.program.create({
         data: {
-          ...p,
+          name: p.name,
+          programFamily: p.programFamily,
+          audience: p.audience,
+          mapsToWorkshopCategory: p.mapsToWorkshopCategory,
+          defaultPrice: p.defaultPrice,
+          priceUnit: p.priceUnit,
           deliveryModeSupported: 'both',
           isActive: true,
           effectiveFrom: new Date(),
         },
+      });
+    }
+  }
+
+  // CRM policy keys
+  const crmPolicies = [
+    { ruleKey: 'dormancy_threshold_days', ruleValue: '60', description: 'Days without qualifying activity before dead' },
+    { ruleKey: 'sales_ageing_warning_days', ruleValue: '45', description: 'Warn before 60-day dead ageing' },
+    { ruleKey: 'school_workshop_min_students', ruleValue: '150', description: 'School workshop commercial-risk threshold' },
+    { ruleKey: 'workshop_online_min_per_student', ruleValue: '550', description: 'Online workshop red-alert ₹/student' },
+    { ruleKey: 'workshop_offline_min_per_student', ruleValue: '700', description: 'Offline workshop red-alert ₹/student' },
+    { ruleKey: 'iasc_price_per_registration', ruleValue: '2000', description: 'IASC fixed price' },
+    { ruleKey: 'nac_school_price', ruleValue: '300', description: 'NAC school price' },
+    { ruleKey: 'nac_direct_price', ruleValue: '500', description: 'NAC direct price' },
+  ];
+  for (const rule of crmPolicies) {
+    const existing = await prisma.policyRule.findFirst({ where: { ruleKey: rule.ruleKey } });
+    if (!existing) {
+      await prisma.policyRule.create({
+        data: { ...rule, effectiveFrom: new Date() },
       });
     }
   }
